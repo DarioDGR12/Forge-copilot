@@ -176,6 +176,37 @@ function needsApproval(name: string): boolean {
   );
 }
 
+function approvalMeta(
+  name: string,
+  args: Record<string, unknown>,
+): { reason: string; sensitive: boolean } {
+  switch (name) {
+    case "type_text":
+      return {
+        reason: `Teclear en la ventana activa: «${String(args.text ?? "")}»`,
+        sensitive: true,
+      };
+    case "press_keys":
+      return { reason: `Pulsar teclas: ${String(args.keys ?? "")}`, sensitive: true };
+    case "mouse_click":
+      return {
+        reason: `Clic ${String(args.button ?? "left")}`,
+        sensitive: true,
+      };
+    case "clipboard_write":
+      return { reason: "Escribir al portapapeles", sensitive: false };
+    case "focus_window":
+      return { reason: `Enfocar ventana: ${String(args.query ?? "")}`, sensitive: false };
+    case "launch_app":
+      return { reason: `Lanzar aplicación: ${String(args.name ?? "")}`, sensitive: false };
+    default:
+      return {
+        reason: `Comando: ${String(args.command ?? name)}`,
+        sensitive: false,
+      };
+  }
+}
+
 async function streamText(conversationId: string, text: string) {
   for (let i = 0; i < text.length; i += 4) {
     emit("agent://token", {
@@ -225,8 +256,7 @@ async function runDemoAgent(conversationId: string) {
             requestId: callId,
             name: tool.name,
             arguments: JSON.stringify(tool.args, null, 2),
-            reason: `Comando: ${String(tool.args.command ?? tool.args.text ?? tool.args.keys ?? tool.name)}`,
-            sensitive: tool.name === "type_text" || tool.name === "press_keys" || tool.name === "mouse_click",
+            ...approvalMeta(tool.name, tool.args),
           } satisfies ApprovalRequest);
         });
       }
