@@ -15,6 +15,11 @@ const LABELS: Record<string, string> = {
   host_info: "Sistema",
   launch_app: "Abrir app",
   open_path: "Abrir ruta",
+  clipboard_read: "Portapapeles",
+  clipboard_write: "Copiar",
+  notify: "Notificación",
+  list_windows: "Ventanas",
+  focus_window: "Enfocar",
 };
 
 export function ToolCard({ message }: ToolCardProps) {

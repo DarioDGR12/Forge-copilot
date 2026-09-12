@@ -11,8 +11,9 @@ Este repositorio es la app que corre **en tu máquina**. No es un servicio en la
 - Chat con Markdown, historial SQLite y bloques de herramientas
 - Proveedores: demostración, OpenAI, Anthropic, OpenRouter, Ollama
 - Claves en el keyring de Linux (`secret-service`); si no hay llavero, archivo `0600` en `~/.local/share/forge-copilot/secrets.json`
-- Tools: `run_terminal`, `read_file`, `write_file`, `list_dir`, `list_apps`, `list_processes`, `screenshot`, `host_info`, `launch_app`, `open_path`
-- Política: lecturas y abrir rutas dentro de `$HOME` en automático; shell, lanzar apps, escrituras y rutas sensibles piden Allow/Deny
+- Tools: `run_terminal`, `read_file`, `write_file`, `list_dir`, `list_apps`, `list_processes`, `screenshot`, `host_info`, `launch_app`, `open_path`, `clipboard_read`, `clipboard_write`, `notify`, `list_windows`, `focus_window`
+- Adjuntar un archivo de texto al mensaje (32 KB) y barra de estado con proveedor, modelo y atajo
+- Política: lecturas, portapapeles (lectura), ventanas, notificaciones y abrir rutas dentro de `$HOME` en automático; shell, lanzar apps, escribir archivos o portapapeles, enfocar ventanas y rutas sensibles piden Allow/Deny
 
 ## Requisitos en Pop!_OS
 
@@ -24,7 +25,13 @@ sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchel
   libgtk-3-dev libayatana-appindicator3-dev
 ```
 
-Para capturas en Wayland/GNOME/COSMIC: `xdg-desktop-portal` y, si puedes, `grim`.
+Herramientas de escritorio opcionales:
+
+```bash
+sudo apt install grim wl-clipboard xclip libnotify-bin wmctrl
+```
+
+En COSMIC/Wayland `wmctrl` a menudo no lista ventanas: Forge lo dice, no simula clics. Portapapeles usa `wl-copy`/`wl-paste` o `xclip`/`xsel`.
 
 ## Desarrollo
 

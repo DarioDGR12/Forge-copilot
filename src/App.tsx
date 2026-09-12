@@ -5,7 +5,7 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { Sidebar } from "./components/Sidebar";
 import { Titlebar } from "./components/Titlebar";
 import { api, isTauri, listen } from "./lib/bridge";
-import type { ApprovalRequest, ChatMessage, Conversation } from "./types";
+import type { ApprovalRequest, ChatMessage, Conversation, Settings } from "./types";
 import "./App.css";
 
 export default function App() {
@@ -18,6 +18,7 @@ export default function App() {
   const [liveTools, setLiveTools] = useState<ChatMessage[]>([]);
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const activeRef = useRef<string | null>(null);
   const sendingRef = useRef(false);
   const loadGen = useRef(0);
@@ -41,6 +42,7 @@ export default function App() {
     void refreshConversations().catch((err: unknown) =>
       setError(err instanceof Error ? err.message : String(err)),
     );
+    void api.getSettings().then(setSettings).catch(() => undefined);
   }, [refreshConversations]);
 
   useEffect(() => {
@@ -236,7 +238,7 @@ export default function App() {
           onDelete={(id) => void handleDelete(id)}
         />
         {view === "settings" ? (
-          <SettingsPanel />
+          <SettingsPanel onSaved={setSettings} />
         ) : (
           <Chat
             messages={visibleMessages}
@@ -250,12 +252,14 @@ export default function App() {
           />
         )}
       </div>
-      {!isTauri() ? (
-        <p className="browser-note">
-          Modo navegador: las herramientas son simuladas. En Pop!_OS abre la app Tauri para acceso
-          real al sistema.
-        </p>
-      ) : null}
+      <footer className="status-bar" data-testid="status-bar">
+        <span data-testid="status-provider">{settings?.provider ?? "demo"}</span>
+        <span aria-hidden>·</span>
+        <span data-testid="status-model">{settings?.model ?? "forge-demo"}</span>
+        <span aria-hidden>·</span>
+        <kbd>{settings?.shortcut ?? "ctrl+shift+space"}</kbd>
+        {!isTauri() ? <span className="status-note">navegador · tools simuladas</span> : null}
+      </footer>
       {approval ? (
         <ApprovalModal
           request={approval}

@@ -35,7 +35,13 @@ const DANGEROUS_CMD: &[&str] = &[
 
 pub fn assess(tool: &str, args: &Value, allowed_roots: &[String]) -> Risk {
     match tool {
-        "list_apps" | "list_processes" | "screenshot" | "host_info" => Risk::AutoAllow,
+        "list_apps"
+        | "list_processes"
+        | "screenshot"
+        | "host_info"
+        | "clipboard_read"
+        | "list_windows"
+        | "notify" => Risk::AutoAllow,
         "list_dir" | "read_file" => assess_read(tool, args_path(args), allowed_roots),
         "open_path" => assess_open(args_path(args), allowed_roots),
         "launch_app" => {
@@ -46,6 +52,27 @@ pub fn assess(tool: &str, args: &Value, allowed_roots: &[String]) -> Risk {
                 .trim();
             Risk::NeedsApproval {
                 reason: format!("Lanzar aplicación: {name}"),
+                sensitive: false,
+            }
+        }
+        "clipboard_write" => {
+            let text = args.get("text").and_then(|v| v.as_str()).unwrap_or("");
+            Risk::NeedsApproval {
+                reason: format!(
+                    "Escribir al portapapeles ({} caracteres)",
+                    text.chars().count()
+                ),
+                sensitive: false,
+            }
+        }
+        "focus_window" => {
+            let query = args
+                .get("query")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            Risk::NeedsApproval {
+                reason: format!("Enfocar ventana: {query}"),
                 sensitive: false,
             }
         }
@@ -309,5 +336,55 @@ mod tests {
     fn tilde_expands_to_home() {
         let expanded = expand_path("~/Documents");
         assert!(expanded.ends_with("Documents"));
+    }
+
+    #[test]
+    fn desktop_read_tools_are_auto() {
+        assert_eq!(
+            assess("clipboard_read", &json!({}), &home_roots()),
+            Risk::AutoAllow
+        );
+        assert_eq!(
+            assess("list_windows", &json!({}), &home_roots()),
+            Risk::AutoAllow
+        );
+        assert_eq!(
+            assess(
+                "notify",
+                &json!({"title": "Forge", "body": "hola"}),
+                &home_roots()
+            ),
+            Risk::AutoAllow
+        );
+    }
+
+    #[test]
+    fn clipboard_write_needs_approval() {
+        match assess(
+            "clipboard_write",
+            &json!({"text": "hola"}),
+            &home_roots(),
+        ) {
+            Risk::NeedsApproval { sensitive, reason } => {
+                assert!(!sensitive);
+                assert!(reason.contains("portapapeles"));
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    #[test]
+    fn focus_window_needs_approval() {
+        match assess(
+            "focus_window",
+            &json!({"query": "Firefox"}),
+            &home_roots(),
+        ) {
+            Risk::NeedsApproval { sensitive, reason } => {
+                assert!(!sensitive);
+                assert!(reason.contains("Firefox"));
+            }
+            other => panic!("unexpected {other:?}"),
+        }
     }
 }

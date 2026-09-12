@@ -27,7 +27,7 @@ pub async fn capture() -> AppResult<ScreenshotResult> {
 
     let mut last_err = String::from("ninguna herramienta de captura está disponible");
     for (bin, args) in attempts {
-        if which(bin).is_none() {
+        if crate::tools::which(bin).is_none() {
             continue;
         }
         match Command::new(bin).args(args).output().await {
@@ -62,13 +62,4 @@ fn pack(path: PathBuf) -> ScreenshotResult {
         }
     });
     ScreenshotResult { path, image_base64 }
-}
-
-fn which(bin: &str) -> Option<PathBuf> {
-    std::env::var_os("PATH").and_then(|paths| {
-        std::env::split_paths(&paths).find_map(|dir| {
-            let candidate = dir.join(bin);
-            candidate.is_file().then_some(candidate)
-        })
-    })
 }

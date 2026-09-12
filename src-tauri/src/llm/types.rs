@@ -71,10 +71,11 @@ pub struct AssistantTurn {
 
 pub const SYSTEM_PROMPT: &str = "\
 Eres Forge Copilot, un asistente de escritorio local para Pop!_OS y Linux.
-Ayudas con la terminal, archivos, aplicaciones, procesos y capturas de pantalla.
+Ayudas con la terminal, archivos, aplicaciones, procesos, capturas, portapapeles, ventanas y notificaciones.
 Responde en el idioma del usuario (por defecto español). Sé claro y conciso.
 Usa herramientas cuando necesites datos reales del sistema; no inventes salidas de comandos.
-Puedes listar/abrir archivos, lanzar apps .desktop, ver procesos, capturar la pantalla y ejecutar terminal.
+Puedes listar/abrir archivos, lanzar apps .desktop, ver procesos, capturar la pantalla, leer/escribir el portapapeles, listar/enfocar ventanas (wmctrl) y enviar notificaciones.
+En COSMIC/Wayland wmctrl o el portapapeles pueden faltar: explica el error, no simules clics.
 Explica en una frase qué vas a hacer antes o después de una herramienta.
 No intentes atacar otras máquinas, no hagas phishing ni uses la red de forma ofensiva.
 Las acciones peligrosas las confirmará el usuario en la interfaz.";
@@ -203,6 +204,65 @@ pub fn tool_specs() -> serde_json::Value {
                     "required": ["path"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "clipboard_read",
+                "description": "Lee el texto del portapapeles (wl-paste, xclip o xsel).",
+                "parameters": { "type": "object", "properties": {} }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "clipboard_write",
+                "description": "Escribe texto en el portapapeles. Pide confirmación.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": { "type": "string" }
+                    },
+                    "required": ["text"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "notify",
+                "description": "Muestra una notificación de escritorio con notify-send.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "title": { "type": "string" },
+                        "body": { "type": "string" }
+                    },
+                    "required": ["title"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "list_windows",
+                "description": "Lista ventanas visibles con wmctrl. En Wayland puro puede no estar disponible.",
+                "parameters": { "type": "object", "properties": {} }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "focus_window",
+                "description": "Enfoca una ventana por título o id (wmctrl). Pide confirmación.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": { "type": "string", "description": "Título o id de ventana" }
+                    },
+                    "required": ["query"]
+                }
+            }
         }
     ])
 }
@@ -290,6 +350,46 @@ pub fn anthropic_tools() -> serde_json::Value {
                 "type": "object",
                 "properties": { "path": { "type": "string" } },
                 "required": ["path"]
+            }
+        },
+        {
+            "name": "clipboard_read",
+            "description": "Lee el texto del portapapeles (wl-paste, xclip o xsel).",
+            "input_schema": { "type": "object", "properties": {} }
+        },
+        {
+            "name": "clipboard_write",
+            "description": "Escribe texto en el portapapeles. Pide confirmación.",
+            "input_schema": {
+                "type": "object",
+                "properties": { "text": { "type": "string" } },
+                "required": ["text"]
+            }
+        },
+        {
+            "name": "notify",
+            "description": "Muestra una notificación de escritorio con notify-send.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "title": { "type": "string" },
+                    "body": { "type": "string" }
+                },
+                "required": ["title"]
+            }
+        },
+        {
+            "name": "list_windows",
+            "description": "Lista ventanas visibles con wmctrl. En Wayland puro puede no estar disponible.",
+            "input_schema": { "type": "object", "properties": {} }
+        },
+        {
+            "name": "focus_window",
+            "description": "Enfoca una ventana por título o id (wmctrl). Pide confirmación.",
+            "input_schema": {
+                "type": "object",
+                "properties": { "query": { "type": "string" } },
+                "required": ["query"]
             }
         }
     ])

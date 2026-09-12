@@ -7,6 +7,8 @@ const HELP: &str = "Soy Forge Copilot. En este modo demostración simulo las her
 Prueba:
 - «qué sistema tengo»
 - «lista los archivos de mi home»
+- «qué hay en el portapapeles»
+- «lista las ventanas»
 - «abre Documentos»
 - «abre Firefox»
 - «ejecuta `uname -a`»
@@ -72,6 +74,32 @@ pub fn infer_tool(text: &str) -> Option<ToolCall> {
     }
     if contains_any(&t, &["qué sistema", "que sistema", "distro", "host_info", "qué os", "que os"]) {
         return Some(call("host_info", "{}"));
+    }
+    if contains_any(&t, &["portapapeles", "clipboard", "wl-paste"]) {
+        if contains_any(&t, &["copia ", "copiar ", "pon ", "escribe ", "escribir "]) {
+            let text = extract_quoted(text)
+                .or_else(|| extract_after_prefix(text, &["copia ", "copiar ", "pon ", "escribe "]))
+                .unwrap_or_else(|| "Forge Copilot".into());
+            let args = serde_json::json!({ "text": text });
+            return Some(call("clipboard_write", &args.to_string()));
+        }
+        return Some(call("clipboard_read", "{}"));
+    }
+    if contains_any(&t, &["enfoca", "enfocar", "focus window", "trae al frente"]) {
+        let query = extract_after_prefix(text, &["enfoca ", "enfocar ", "focus "])
+            .unwrap_or_else(|| "Firefox".into());
+        let args = serde_json::json!({ "query": query });
+        return Some(call("focus_window", &args.to_string()));
+    }
+    if contains_any(&t, &["ventana", "ventanas", "wmctrl"]) {
+        return Some(call("list_windows", "{}"));
+    }
+    if contains_any(&t, &["notifica", "notificación", "notificacion", "notify-send", "avísame", "avisame"]) {
+        let body = extract_quoted(text)
+            .or_else(|| extract_after_prefix(text, &["notifica ", "notificación ", "notificacion "]))
+            .unwrap_or_else(|| "Hola desde Forge".into());
+        let args = serde_json::json!({ "title": "Forge Copilot", "body": body });
+        return Some(call("notify", &args.to_string()));
     }
     if contains_any(&t, &["proceso", "process", "cpu"]) {
         return Some(call("list_processes", r#"{"limit":25}"#));
@@ -159,6 +187,37 @@ fn extract_app_name(text: &str) -> Option<String> {
     None
 }
 
+fn extract_quoted(text: &str) -> Option<String> {
+    for quote in ['"', '\'', '«'] {
+        if let Some(start) = text.find(quote) {
+            let close = if quote == '«' { '»' } else { quote };
+            if let Some(end_rel) = text[start + close.len_utf8()..].find(close) {
+                let inner = text[start + close.len_utf8()..start + close.len_utf8() + end_rel].trim();
+                if !inner.is_empty() {
+                    return Some(inner.to_string());
+                }
+            }
+        }
+    }
+    None
+}
+
+fn extract_after_prefix(text: &str, prefixes: &[&str]) -> Option<String> {
+    let lower = text.to_lowercase();
+    for prefix in prefixes {
+        if let Some(idx) = lower.find(prefix) {
+            let rest = text[idx + prefix.len()..].trim();
+            let cleaned = rest
+                .trim_matches(|c| c == '"' || c == '.' || c == '!' || c == '»')
+                .trim();
+            if !cleaned.is_empty() {
+                return Some(cleaned.to_string());
+            }
+        }
+    }
+    None
+}
+
 fn extract_path(text: &str) -> Option<String> {
     text.split_whitespace()
         .find(|w| w.starts_with('/') || w.starts_with("~/") || w.starts_with('.'))
@@ -229,5 +288,39 @@ mod tests {
         let call = infer_tool("abre Firefox").unwrap();
         assert_eq!(call.name, "launch_app");
         assert!(call.arguments.contains("Firefox"));
+    }
+
+    #[test]
+    fn infers_clipboard_read() {
+        assert_eq!(
+            infer_tool("qué hay en el portapapeles").unwrap().name,
+            "clipboard_read"
+        );
+    }
+
+    #[test]
+    fn infers_clipboard_write() {
+        let call = infer_tool("copia \"hola\" al portapapeles").unwrap();
+        assert_eq!(call.name, "clipboard_write");
+        assert!(call.arguments.contains("hola"));
+    }
+
+    #[test]
+    fn infers_list_windows() {
+        assert_eq!(infer_tool("lista las ventanas").unwrap().name, "list_windows");
+    }
+
+    #[test]
+    fn infers_focus_window() {
+        let call = infer_tool("enfoca Firefox").unwrap();
+        assert_eq!(call.name, "focus_window");
+        assert!(call.arguments.contains("Firefox"));
+    }
+
+    #[test]
+    fn infers_notify() {
+        let call = infer_tool("notifica «Reunión en 5»").unwrap();
+        assert_eq!(call.name, "notify");
+        assert!(call.arguments.contains("Reunión en 5"));
     }
 }

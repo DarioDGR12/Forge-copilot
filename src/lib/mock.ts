@@ -51,6 +51,29 @@ function inferTool(text: string): { name: string; args: Record<string, unknown> 
   if (t.includes("sistema") || t.includes("distro") || t.includes("host_info")) {
     return { name: "host_info", args: {} };
   }
+  if (t.includes("portapapeles") || t.includes("clipboard") || t.includes("wl-paste")) {
+    if (
+      t.includes("copia ") ||
+      t.includes("copiar ") ||
+      t.includes("pon ") ||
+      t.includes("escribe ")
+    ) {
+      const quoted = text.match(/["«]([^"»]+)["»]/);
+      return { name: "clipboard_write", args: { text: quoted?.[1] ?? "Forge Copilot" } };
+    }
+    return { name: "clipboard_read", args: {} };
+  }
+  if (t.includes("enfoca") || t.includes("enfocar") || t.includes("focus window")) {
+    const query = text.replace(/^(enfoca|enfocar|focus)\s+/i, "").trim() || "Firefox";
+    return { name: "focus_window", args: { query } };
+  }
+  if (t.includes("ventana") || t.includes("wmctrl")) {
+    return { name: "list_windows", args: {} };
+  }
+  if (t.includes("notifica") || t.includes("notify-send") || t.includes("avísame") || t.includes("avisame")) {
+    const quoted = text.match(/["«]([^"»]+)["»]/);
+    return { name: "notify", args: { title: "Forge Copilot", body: quoted?.[1] ?? "Hola desde Forge" } };
+  }
   if (t.includes("abre ") || t.includes("abrir ") || t.includes("lanza ")) {
     if (t.includes("documento") || t.includes("home") || t.includes("carpeta")) {
       return { name: "open_path", args: { path: "~/Documents" } };
@@ -95,13 +118,29 @@ function mockToolResult(name: string, args: Record<string, unknown>): string {
       return `lanzada ${String(args.name ?? "Firefox")} (demo)`;
     case "open_path":
       return `abierto ${String(args.path ?? "~/Documents")}`;
+    case "clipboard_read":
+      return "hola desde el portapapeles (demo)";
+    case "clipboard_write":
+      return `copiados ${String(args.text ?? "").length} caracteres al portapapeles`;
+    case "notify":
+      return `notificación: ${String(args.title ?? "Forge Copilot")}`;
+    case "list_windows":
+      return "2 ventanas\n0x03c00007  Firefox\n0x02a00001  Forge Copilot";
+    case "focus_window":
+      return `enfocada: ${String(args.query ?? "Firefox")}`;
     default:
       return "ok";
   }
 }
 
 function needsApproval(name: string): boolean {
-  return name === "run_terminal" || name === "write_file" || name === "launch_app";
+  return (
+    name === "run_terminal" ||
+    name === "write_file" ||
+    name === "launch_app" ||
+    name === "clipboard_write" ||
+    name === "focus_window"
+  );
 }
 
 async function streamText(conversationId: string, text: string) {
@@ -215,7 +254,7 @@ async function runDemoAgent(conversationId: string) {
     }
 
     const help =
-      "Soy Forge Copilot. En el navegador estoy en modo demostración. En Pop!_OS, la app Tauri usa tu terminal, archivos, apps y captura de verdad.\n\nPrueba: «lista los archivos de mi home», «ejecuta `uname -a`» o «¿qué procesos hay?».";
+      "Soy Forge Copilot. En el navegador estoy en modo demostración. En Pop!_OS, la app Tauri usa tu terminal, archivos, apps, portapapeles y ventanas de verdad.\n\nPrueba: «qué hay en el portapapeles», «lista las ventanas» o «ejecuta `uname -a`».";
     await streamText(conversationId, help);
     pushMessage(conversationId, { role: "assistant", content: help });
     emit("agent://done", { conversationId, status: "ok" });

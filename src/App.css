@@ -323,6 +323,48 @@ button {
   padding: 10px 12px 12px;
   border-top: 1px solid var(--border);
   background: var(--bg-elev);
+  align-items: flex-end;
+}
+
+.composer-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.composer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.attach-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  background: var(--user);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px 8px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.status-note {
+  margin-left: auto;
 }
 
 .composer textarea,

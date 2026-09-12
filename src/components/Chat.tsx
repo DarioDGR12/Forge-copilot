@@ -10,9 +10,15 @@ type ChatProps = {
   onCancel: () => void;
 };
 
+const MAX_ATTACH = 32 * 1024;
+
 export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps) {
   const [draft, setDraft] = useState("");
+  const [attachName, setAttachName] = useState<string | null>(null);
+  const [attachText, setAttachText] = useState<string | null>(null);
+  const [attachError, setAttachError] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const locked = useRef(false);
 
   useEffect(() => {
@@ -23,13 +29,47 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
     if (!streaming) locked.current = false;
   }, [streaming]);
 
+  function compose(userText: string): string | null {
+    const body = userText.trim();
+    if (attachText && attachName) {
+      const block = `Adjunto «${attachName}»:\n\`\`\`\n${attachText}\n\`\`\``;
+      return body ? `${block}\n\n${body}` : block;
+    }
+    return body || null;
+  }
+
   function submit() {
-    const text = draft.trim();
+    const text = compose(draft);
     if (!text || streaming || locked.current) return;
     locked.current = true;
     onSend(text);
     setDraft("");
+    setAttachName(null);
+    setAttachText(null);
+    setAttachError(null);
+    if (fileRef.current) fileRef.current.value = "";
   }
+
+  function onPickFile(file: File | undefined) {
+    setAttachError(null);
+    if (!file) return;
+    if (file.size > MAX_ATTACH) {
+      setAttachError(`El adjunto supera ${MAX_ATTACH / 1024} KB. Elige un archivo de texto más corto.`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+      setAttachName(file.name);
+      setAttachText(result);
+    };
+    reader.onerror = () => {
+      setAttachError("No pude leer el archivo.");
+    };
+    reader.readAsText(file);
+  }
+
+  const canSend = Boolean(draft.trim() || attachText);
 
   return (
     <section className="chat">
@@ -46,6 +86,8 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
                 [
                   ["chip-host", "Qué sistema tengo"],
                   ["chip-files", "Lista los archivos de mi home"],
+                  ["chip-clipboard", "Qué hay en el portapapeles"],
+                  ["chip-windows", "Lista las ventanas"],
                   ["chip-docs", "Abre Documentos"],
                   ["chip-uname", "Ejecuta `uname -a`"],
                 ] as const
@@ -73,39 +115,78 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
         <div ref={endRef} />
       </div>
       {error ? <p className="error-bar">{error}</p> : null}
+      {attachError ? <p className="error-bar">{attachError}</p> : null}
       <div className="composer">
-        <textarea
-          data-testid="composer"
-          value={draft}
-          placeholder="Pregunta o pide una acción en tu sistema…"
-          rows={2}
-          onChange={(e) => {
-            if (!streaming) locked.current = false;
-            setDraft(e.target.value);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              e.stopPropagation();
-              submit();
-            }
-          }}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="text/*,.md,.txt,.json,.rs,.ts,.tsx,.js,.py,.toml,.yml,.yaml"
+          hidden
+          data-testid="attach-input"
+          onChange={(e) => onPickFile(e.target.files?.[0])}
         />
-        {streaming ? (
-          <button type="button" className="ghost" data-testid="cancel-send" onClick={onCancel}>
-            Detener
-          </button>
-        ) : (
+        <div className="composer-main">
+          {attachName ? (
+            <div className="attach-chip" data-testid="attach-chip">
+              <span>{attachName}</span>
+              <button
+                type="button"
+                className="ghost"
+                aria-label="Quitar adjunto"
+                onClick={() => {
+                  setAttachName(null);
+                  setAttachText(null);
+                  if (fileRef.current) fileRef.current.value = "";
+                }}
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
+          <textarea
+            data-testid="composer"
+            value={draft}
+            placeholder="Pregunta, pide una acción o adjunta un archivo de texto…"
+            rows={2}
+            onChange={(e) => {
+              if (!streaming) locked.current = false;
+              setDraft(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                e.stopPropagation();
+                submit();
+              }
+            }}
+          />
+        </div>
+        <div className="composer-actions">
           <button
             type="button"
-            className="primary"
-            data-testid="send"
-            disabled={!draft.trim()}
-            onClick={submit}
+            className="ghost"
+            data-testid="attach"
+            disabled={streaming}
+            onClick={() => fileRef.current?.click()}
           >
-            Enviar
+            Adjuntar
           </button>
-        )}
+          {streaming ? (
+            <button type="button" className="ghost" data-testid="cancel-send" onClick={onCancel}>
+              Detener
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="primary"
+              data-testid="send"
+              disabled={!canSend}
+              onClick={submit}
+            >
+              Enviar
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );
