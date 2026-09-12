@@ -3,9 +3,10 @@ import { api, isTauri } from "../lib/bridge";
 type TitlebarProps = {
   view: "chat" | "settings";
   onView: (view: "chat" | "settings") => void;
+  onNew: () => void;
 };
 
-export function Titlebar({ view, onView }: TitlebarProps) {
+export function Titlebar({ view, onView, onNew }: TitlebarProps) {
   return (
     <header className="titlebar" data-tauri-drag-region>
       <div className="brand" data-tauri-drag-region>
@@ -15,6 +16,14 @@ export function Titlebar({ view, onView }: TitlebarProps) {
           <small>Pop!_OS · local</small>
         </div>
       </div>
+      <button
+        type="button"
+        className="ghost new-overlay"
+        data-testid="new-chat-title"
+        onClick={onNew}
+      >
+        Nueva
+      </button>
       <nav className="tabs">
         <button
           className={view === "chat" ? "tab active" : "tab"}

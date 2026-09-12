@@ -228,7 +228,7 @@ export default function App() {
 
   return (
     <div className="shell">
-      <Titlebar view={view} onView={setView} />
+      <Titlebar view={view} onView={setView} onNew={() => void handleNew()} />
       <div className="body">
         <Sidebar
           items={conversations}

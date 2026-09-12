@@ -336,8 +336,14 @@ button {
 
 .composer-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 6px;
+}
+
+.new-overlay {
+  font-size: 12px;
+  border: 1px solid var(--border);
 }
 
 .attach-chip {
