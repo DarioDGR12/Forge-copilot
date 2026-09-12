@@ -1,5 +1,5 @@
 use crate::error::AppResult;
-use crate::llm::types::{AssistantTurn, ChatMessage, Role, ToolCall, SYSTEM_PROMPT};
+use crate::llm::types::{AssistantTurn, ChatMessage, Role, ToolCall};
 use crate::settings::{effective_base_url, effective_model, Settings};
 use futures_util::StreamExt;
 use serde_json::{json, Value};
@@ -78,7 +78,7 @@ pub async fn test_connection(
 }
 
 fn to_openai_messages(messages: &[ChatMessage]) -> Value {
-    let mut out = vec![json!({"role":"system","content": SYSTEM_PROMPT})];
+    let mut out = vec![json!({"role":"system","content": crate::host::system_prompt()})];
     for msg in messages {
         match msg.role {
             Role::User => out.push(json!({"role":"user","content": msg.content})),

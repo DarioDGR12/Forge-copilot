@@ -35,8 +35,20 @@ const DANGEROUS_CMD: &[&str] = &[
 
 pub fn assess(tool: &str, args: &Value, allowed_roots: &[String]) -> Risk {
     match tool {
-        "list_apps" | "list_processes" | "screenshot" => Risk::AutoAllow,
+        "list_apps" | "list_processes" | "screenshot" | "host_info" => Risk::AutoAllow,
         "list_dir" | "read_file" => assess_read(tool, args_path(args), allowed_roots),
+        "open_path" => assess_open(args_path(args), allowed_roots),
+        "launch_app" => {
+            let name = args
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .trim();
+            Risk::NeedsApproval {
+                reason: format!("Lanzar aplicación: {name}"),
+                sensitive: false,
+            }
+        }
         "write_file" => assess_write(args_path(args), allowed_roots),
         "run_terminal" => {
             let command = args
@@ -140,6 +152,22 @@ fn assess_read(tool: &str, path: PathBuf, roots: &[String]) -> Risk {
     }
 }
 
+fn assess_open(path: PathBuf, roots: &[String]) -> Risk {
+    if is_sensitive(&path) {
+        return Risk::NeedsApproval {
+            reason: format!("Abrir ruta sensible: {}", path.display()),
+            sensitive: true,
+        };
+    }
+    if in_allowed_roots(&path, roots) {
+        return Risk::AutoAllow;
+    }
+    Risk::NeedsApproval {
+        reason: format!("Abrir fuera de las carpetas permitidas: {}", path.display()),
+        sensitive: false,
+    }
+}
+
 fn assess_write(path: PathBuf, roots: &[String]) -> Risk {
     let sensitive = is_sensitive(&path) || !in_allowed_roots(&path, roots);
     Risk::NeedsApproval {
@@ -159,6 +187,7 @@ mod tests {
 
     #[test]
     fn lists_and_screenshot_are_auto() {
+        assert_eq!(assess("host_info", &json!({}), &home_roots()), Risk::AutoAllow);
         assert_eq!(
             assess("list_apps", &json!({}), &home_roots()),
             Risk::AutoAllow
@@ -251,6 +280,29 @@ mod tests {
         let escaped = normalize(Path::new("/home/demo/../etc/shadow"));
         assert!(is_sensitive(&escaped));
         assert!(!in_allowed_roots(Path::new("/home/demo/../etc"), &home_roots()));
+    }
+
+    #[test]
+    fn launch_app_needs_approval() {
+        match assess("launch_app", &json!({"name": "Firefox"}), &home_roots()) {
+            Risk::NeedsApproval { sensitive, reason } => {
+                assert!(!sensitive);
+                assert!(reason.contains("Firefox"));
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    #[test]
+    fn open_home_file_is_auto() {
+        assert_eq!(
+            assess(
+                "open_path",
+                &json!({"path": "/home/demo/Documents"}),
+                &home_roots()
+            ),
+            Risk::AutoAllow
+        );
     }
 
     #[test]

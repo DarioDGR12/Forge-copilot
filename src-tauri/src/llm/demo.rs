@@ -2,31 +2,37 @@ use crate::error::AppResult;
 use crate::llm::types::{AssistantTurn, ChatMessage, Role, ToolCall};
 use std::time::Duration;
 
-const HELP: &str = "Soy Forge Copilot. En este modo demostración puedo simular herramientas y, si corres la app Tauri en Pop!_OS, usar de verdad tu terminal, archivos, apps, procesos y captura de pantalla.
+const HELP: &str = "Soy Forge Copilot. En este modo demostración simulo las herramientas; en la app Tauri de Pop!_OS las ejecuto de verdad.
 
 Prueba:
+- «qué sistema tengo»
 - «lista los archivos de mi home»
-- «¿qué procesos consumen más CPU?»
+- «abre Documentos»
+- «abre Firefox»
 - «ejecuta `uname -a`»
-- «captura la pantalla»
 
-En Ajustes puedes poner tu propia clave (BYOK) de OpenAI, Anthropic, OpenRouter u Ollama.";
+En Ajustes pones tu propia clave (BYOK).";
 
 pub async fn complete(
     messages: &[ChatMessage],
     on_token: &mut (dyn FnMut(&str) + Send),
 ) -> AppResult<AssistantTurn> {
-    if let Some(tool) = messages.iter().rev().find(|m| m.role == Role::Tool) {
-        let reply = format!(
-            "Listo. Esto es lo que devolvió **{}**:\n\n```\n{}\n```",
-            tool.tool_name.as_deref().unwrap_or("herramienta"),
-            truncate(&tool.content, 4000)
-        );
-        stream_text(&reply, on_token).await;
-        return Ok(AssistantTurn {
-            text: reply,
-            tool_calls: vec![],
-        });
+    let last_user = messages.iter().rposition(|m| m.role == Role::User);
+    let last_tool = messages.iter().rposition(|m| m.role == Role::Tool);
+    if let (Some(tool_idx), Some(user_idx)) = (last_tool, last_user) {
+        if tool_idx > user_idx {
+            let tool = &messages[tool_idx];
+            let reply = format!(
+                "Listo. Esto es lo que devolvió **{}**:\n\n```\n{}\n```",
+                tool.tool_name.as_deref().unwrap_or("herramienta"),
+                truncate(&tool.content, 4000)
+            );
+            stream_text(&reply, on_token).await;
+            return Ok(AssistantTurn {
+                text: reply,
+                tool_calls: vec![],
+            });
+        }
     }
 
     let user = messages
@@ -64,8 +70,31 @@ pub fn infer_tool(text: &str) -> Option<ToolCall> {
             return Some(call("screenshot", "{}"));
         }
     }
+    if contains_any(&t, &["qué sistema", "que sistema", "distro", "host_info", "qué os", "que os"]) {
+        return Some(call("host_info", "{}"));
+    }
     if contains_any(&t, &["proceso", "process", "cpu"]) {
         return Some(call("list_processes", r#"{"limit":25}"#));
+    }
+    if contains_any(&t, &["abre ", "abrir ", "lanza ", "lanzar "]) {
+        if let Some(path) = extract_path(text) {
+            let args = serde_json::json!({ "path": path });
+            return Some(call("open_path", &args.to_string()));
+        }
+        if contains_any(&t, &["documento", "descarga", "home", "carpeta"]) {
+            let path = if t.contains("descarga") {
+                "~/Downloads"
+            } else if t.contains("home") {
+                "~"
+            } else {
+                "~/Documents"
+            };
+            let args = serde_json::json!({ "path": path });
+            return Some(call("open_path", &args.to_string()));
+        }
+        let name = extract_app_name(text).unwrap_or_else(|| "Firefox".into());
+        let args = serde_json::json!({ "name": name });
+        return Some(call("launch_app", &args.to_string()));
     }
     if contains_any(&t, &["aplicación", "aplicacion", "apps instal", "aplicaciones"]) {
         return Some(call("list_apps", "{}"));
@@ -118,6 +147,18 @@ fn extract_command(text: &str) -> Option<String> {
     None
 }
 
+fn extract_app_name(text: &str) -> Option<String> {
+    for prefix in ["abre ", "abrir ", "lanza ", "lanzar "] {
+        if let Some(idx) = text.to_lowercase().find(prefix) {
+            let rest = text[idx + prefix.len()..].trim();
+            if !rest.is_empty() {
+                return Some(rest.trim_matches(|c| c == '"' || c == '.' || c == '!').to_string());
+            }
+        }
+    }
+    None
+}
+
 fn extract_path(text: &str) -> Option<String> {
     text.split_whitespace()
         .find(|w| w.starts_with('/') || w.starts_with("~/") || w.starts_with('.'))
@@ -164,5 +205,29 @@ mod tests {
     #[test]
     fn chat_without_tools() {
         assert!(infer_tool("hola, ¿qué puedes hacer?").is_none());
+    }
+
+    #[test]
+    fn new_user_turn_is_not_old_tool_followup() {
+        assert!(infer_tool("ejecuta `uname -a`").is_some());
+    }
+
+    #[test]
+    fn infers_host_info() {
+        assert_eq!(infer_tool("qué sistema tengo").unwrap().name, "host_info");
+    }
+
+    #[test]
+    fn infers_open_documents() {
+        let call = infer_tool("abre Documentos").unwrap();
+        assert_eq!(call.name, "open_path");
+        assert!(call.arguments.contains("Documents"));
+    }
+
+    #[test]
+    fn infers_launch_firefox() {
+        let call = infer_tool("abre Firefox").unwrap();
+        assert_eq!(call.name, "launch_app");
+        assert!(call.arguments.contains("Firefox"));
     }
 }

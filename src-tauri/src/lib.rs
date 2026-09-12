@@ -1,5 +1,6 @@
 mod agent;
 mod error;
+mod host;
 mod llm;
 mod policy;
 mod secrets;

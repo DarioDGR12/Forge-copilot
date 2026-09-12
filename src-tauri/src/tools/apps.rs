@@ -9,7 +9,7 @@ pub struct DesktopApp {
     pub desktop_file: String,
 }
 
-pub fn list_apps() -> AppResult<String> {
+pub fn collect_apps() -> Vec<DesktopApp> {
     let mut dirs = vec![
         std::path::PathBuf::from("/usr/share/applications"),
         std::path::PathBuf::from("/usr/local/share/applications"),
@@ -23,9 +23,8 @@ pub fn list_apps() -> AppResult<String> {
         if !dir.is_dir() {
             continue;
         }
-        let read = match fs::read_dir(&dir) {
-            Ok(rd) => rd,
-            Err(_) => continue,
+        let Ok(read) = fs::read_dir(&dir) else {
+            continue;
         };
         for entry in read.flatten() {
             let path = entry.path();
@@ -42,12 +41,75 @@ pub fn list_apps() -> AppResult<String> {
     }
 
     apps.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-    apps.dedup_by(|a, b| a.name == b.name);
+    apps.dedup_by(|a, b| a.name.eq_ignore_ascii_case(&b.name));
+    apps
+}
+
+pub fn list_apps() -> AppResult<String> {
+    let apps = collect_apps();
     let mut lines = vec![format!("{} aplicaciones", apps.len())];
     for app in apps.into_iter().take(250) {
         lines.push(format!("{} — {}", app.name, app.exec));
     }
     Ok(lines.join("\n"))
+}
+
+pub fn clean_exec(exec: &str) -> Option<String> {
+    if exec.contains('\n') || exec.contains("..") {
+        return None;
+    }
+    let bin = exec
+        .split_whitespace()
+        .find(|part| !part.starts_with('%'))
+        .map(|part| part.to_string())?;
+    if bin.contains('/') && !std::path::Path::new(&bin).exists() {
+        return None;
+    }
+    Some(bin)
+}
+
+pub fn launch_app(name: &str) -> AppResult<String> {
+    let needle = name.trim();
+    if needle.is_empty() {
+        return Err("nombre de aplicación vacío".into());
+    }
+    let apps = collect_apps();
+    let app = apps
+        .iter()
+        .find(|a| a.name.eq_ignore_ascii_case(needle))
+        .or_else(|| {
+            apps.iter().find(|a| a.name.to_lowercase().contains(&needle.to_lowercase()))
+        })
+        .ok_or_else(|| format!("no encontré una app .desktop llamada «{needle}»"))?;
+
+    let stem = std::path::Path::new(&app.desktop_file)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("");
+    if !stem.is_empty() && which("gtk-launch").is_some() {
+        match std::process::Command::new("gtk-launch").arg(stem).spawn() {
+            Ok(_) => return Ok(format!("lanzada {} ({stem})", app.name)),
+            Err(err) => {
+                eprintln!("gtk-launch: {err}");
+            }
+        }
+    }
+
+    let bin = clean_exec(&app.exec)
+        .ok_or_else(|| format!("Exec no seguro en {}", app.desktop_file))?;
+    std::process::Command::new(bin)
+        .spawn()
+        .map_err(|e| format!("no se pudo lanzar {}: {e}", app.name))?;
+    Ok(format!("lanzada {}", app.name))
+}
+
+fn which(bin: &str) -> Option<std::path::PathBuf> {
+    std::env::var_os("PATH").and_then(|paths| {
+        std::env::split_paths(&paths).find_map(|dir| {
+            let candidate = dir.join(bin);
+            candidate.is_file().then_some(candidate)
+        })
+    })
 }
 
 pub fn parse_desktop(contents: &str) -> Option<DesktopApp> {
@@ -123,5 +185,11 @@ Type=Application
     fn skips_non_application() {
         let raw = "[Desktop Entry]\nName=Link\nExec=x\nType=Link\n";
         assert!(parse_desktop(raw).is_none());
+    }
+
+    #[test]
+    fn strips_field_codes() {
+        assert_eq!(clean_exec("firefox %u").as_deref(), Some("firefox"));
+        assert_eq!(clean_exec("bad\nbin"), None);
     }
 }

@@ -1,6 +1,6 @@
 use crate::error::AppResult;
 use crate::llm::types::{
-    anthropic_tools, AssistantTurn, ChatMessage, Role, ToolCall, SYSTEM_PROMPT,
+    anthropic_tools, AssistantTurn, ChatMessage, Role, ToolCall,
 };
 use crate::settings::{effective_base_url, effective_model, Settings};
 use futures_util::StreamExt;
@@ -18,7 +18,7 @@ pub async fn complete(
     let body = json!({
         "model": effective_model(settings),
         "max_tokens": 4096,
-        "system": SYSTEM_PROMPT,
+        "system": crate::host::system_prompt(),
         "messages": to_anthropic_messages(messages),
         "tools": anthropic_tools(),
         "stream": true,

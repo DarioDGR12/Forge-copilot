@@ -12,6 +12,9 @@ const LABELS: Record<string, string> = {
   list_apps: "Aplicaciones",
   list_processes: "Procesos",
   screenshot: "Captura",
+  host_info: "Sistema",
+  launch_app: "Abrir app",
+  open_path: "Abrir ruta",
 };
 
 export function ToolCard({ message }: ToolCardProps) {

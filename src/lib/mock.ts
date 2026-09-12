@@ -48,6 +48,16 @@ function inferTool(text: string): { name: string; args: Record<string, unknown> 
   if (t.includes("screenshot") || t.includes("captura") || t.includes("pantalla")) {
     return { name: "screenshot", args: {} };
   }
+  if (t.includes("sistema") || t.includes("distro") || t.includes("host_info")) {
+    return { name: "host_info", args: {} };
+  }
+  if (t.includes("abre ") || t.includes("abrir ") || t.includes("lanza ")) {
+    if (t.includes("documento") || t.includes("home") || t.includes("carpeta")) {
+      return { name: "open_path", args: { path: "~/Documents" } };
+    }
+    const name = text.replace(/^(abre|abrir|lanza|lanzar)\s+/i, "").trim() || "Firefox";
+    return { name: "launch_app", args: { name } };
+  }
   if (t.includes("proceso") || t.includes("cpu")) {
     return { name: "list_processes", args: { limit: 8 } };
   }
@@ -79,13 +89,19 @@ function mockToolResult(name: string, args: Record<string, unknown>): string {
       return "CPU%   PID     MEM(MB)  NOMBRE\n 12.4  1422      480.1  firefox\n  8.1  2201      210.4  cosmic-comp\n  3.0  884       90.2  forge-copilot";
     case "screenshot":
       return "Captura guardada en /tmp/forge-copilot-demo.png";
+    case "host_info":
+      return "usuario=dario\nhostname=pop-os\nos=Pop!_OS 24.04 LTS\ndesktop=COSMIC\nhome=/home/dario";
+    case "launch_app":
+      return `lanzada ${String(args.name ?? "Firefox")} (demo)`;
+    case "open_path":
+      return `abierto ${String(args.path ?? "~/Documents")}`;
     default:
       return "ok";
   }
 }
 
 function needsApproval(name: string): boolean {
-  return name === "run_terminal" || name === "write_file";
+  return name === "run_terminal" || name === "write_file" || name === "launch_app";
 }
 
 async function streamText(conversationId: string, text: string) {
@@ -100,11 +116,13 @@ async function streamText(conversationId: string, text: string) {
 
 async function runDemoAgent(conversationId: string) {
   const hist = messages.get(conversationId) ?? [];
-  const lastUser = [...hist].reverse().find((m) => m.role === "user");
-  const lastTool = [...hist].reverse().find((m) => m.role === "tool");
+  const lastUserIdx = hist.map((m) => m.role).lastIndexOf("user");
+  const lastToolIdx = hist.map((m) => m.role).lastIndexOf("tool");
+  const lastUser = lastUserIdx >= 0 ? hist[lastUserIdx] : undefined;
+  const lastTool = lastToolIdx >= 0 ? hist[lastToolIdx] : undefined;
 
   try {
-    if (lastTool) {
+    if (lastTool && lastToolIdx > lastUserIdx) {
       const reply = `Listo. Esto es lo que devolvió **${lastTool.toolName ?? "la herramienta"}**:\n\n\`\`\`\n${lastTool.content}\n\`\`\``;
       await streamText(conversationId, reply);
       pushMessage(conversationId, {

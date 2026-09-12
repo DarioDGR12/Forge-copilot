@@ -11,8 +11,8 @@ Este repositorio es la app que corre **en tu máquina**. No es un servicio en la
 - Chat con Markdown, historial SQLite y bloques de herramientas
 - Proveedores: demostración, OpenAI, Anthropic, OpenRouter, Ollama
 - Claves en el keyring de Linux (`secret-service`); si no hay llavero, archivo `0600` en `~/.local/share/forge-copilot/secrets.json`
-- Tools: `run_terminal`, `read_file`, `write_file`, `list_dir`, `list_apps`, `list_processes`, `screenshot`
-- Política: lecturas dentro de `$HOME` en automático; shell, escrituras y rutas sensibles piden Allow/Deny
+- Tools: `run_terminal`, `read_file`, `write_file`, `list_dir`, `list_apps`, `list_processes`, `screenshot`, `host_info`, `launch_app`, `open_path`
+- Política: lecturas y abrir rutas dentro de `$HOME` en automático; shell, lanzar apps, escrituras y rutas sensibles piden Allow/Deny
 
 ## Requisitos en Pop!_OS
 

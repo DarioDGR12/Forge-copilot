@@ -34,6 +34,18 @@ pub fn write_file(path: &str, content: &str) -> AppResult<String> {
     Ok(format!("escrito {} bytes en {}", content.len(), path.display()))
 }
 
+pub fn open_path(path: &str) -> AppResult<String> {
+    let path = expand_path(path);
+    if !path.exists() {
+        return Err(format!("no existe {}", path.display()).into());
+    }
+    std::process::Command::new("xdg-open")
+        .arg(&path)
+        .spawn()
+        .map_err(|e| format!("xdg-open: {e}"))?;
+    Ok(format!("abierto {}", path.display()))
+}
+
 pub fn list_dir(path: &str) -> AppResult<String> {
     let path = expand_path(path);
     let mut entries: Vec<_> = fs::read_dir(&path)?.collect::<Result<Vec<_>, _>>()?;

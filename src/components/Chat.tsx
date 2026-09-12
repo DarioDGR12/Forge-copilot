@@ -41,11 +41,31 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
               Un Copilot para Pop!_OS: chat, terminal, archivos y tu escritorio, con tu propia
               clave.
             </p>
-            <ul>
-              <li>Lista los archivos de mi home</li>
-              <li>Ejecuta `uname -a`</li>
-              <li>¿Qué procesos consumen más CPU?</li>
-            </ul>
+            <div className="chips">
+              {(
+                [
+                  ["chip-host", "Qué sistema tengo"],
+                  ["chip-files", "Lista los archivos de mi home"],
+                  ["chip-docs", "Abre Documentos"],
+                  ["chip-uname", "Ejecuta `uname -a`"],
+                ] as const
+              ).map(([id, chip]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="chip"
+                  data-testid={id}
+                  disabled={streaming}
+                  onClick={() => {
+                    if (streaming || locked.current) return;
+                    locked.current = true;
+                    onSend(chip);
+                  }}
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           messages.map((message) => <MessageBubble key={message.id} message={message} />)
@@ -59,7 +79,10 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
           value={draft}
           placeholder="Pregunta o pide una acción en tu sistema…"
           rows={2}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            if (!streaming) locked.current = false;
+            setDraft(e.target.value);
+          }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();

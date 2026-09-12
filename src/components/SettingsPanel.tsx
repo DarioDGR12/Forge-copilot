@@ -138,13 +138,15 @@ export function SettingsPanel({ onSaved }: SettingsPanelProps) {
           value={settings.baseUrl}
           onChange={(e) => setSettings({ ...settings, baseUrl: e.target.value })}
           placeholder={
-            settings.provider === "ollama"
-              ? "http://127.0.0.1:11434/v1"
-              : settings.provider === "openai"
-                ? "https://api.openai.com/v1"
-                : settings.provider === "anthropic"
-                  ? "https://api.anthropic.com"
-                  : "https://openrouter.ai/api/v1"
+            settings.provider === "demo"
+              ? "no necesario en demostración"
+              : settings.provider === "ollama"
+                ? "http://127.0.0.1:11434/v1"
+                : settings.provider === "openai"
+                  ? "https://api.openai.com/v1"
+                  : settings.provider === "anthropic"
+                    ? "https://api.anthropic.com"
+                    : "https://openrouter.ai/api/v1"
           }
         />
       </label>

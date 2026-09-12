@@ -11,8 +11,8 @@ export function Titlebar({ view, onView }: TitlebarProps) {
       <div className="brand" data-tauri-drag-region>
         <span className="mark" aria-hidden />
         <div>
-          <strong>Forge</strong>
-          <small>Copilot · Pop!_OS</small>
+          <strong>Forge Copilot</strong>
+          <small>Pop!_OS · local</small>
         </div>
       </div>
       <nav className="tabs">

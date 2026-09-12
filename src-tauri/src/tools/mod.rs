@@ -65,6 +65,24 @@ pub async fn execute(name: &str, args: &Value) -> AppResult<ToolOutcome> {
                 image_base64: shot.image_base64,
             })
         }
+        "host_info" => Ok(ToolOutcome {
+            text: crate::host::render(),
+            image_base64: None,
+        }),
+        "launch_app" => {
+            let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("");
+            Ok(ToolOutcome {
+                text: apps::launch_app(name)?,
+                image_base64: None,
+            })
+        }
+        "open_path" => {
+            let path = args.get("path").and_then(|v| v.as_str()).unwrap_or("");
+            Ok(ToolOutcome {
+                text: fs::open_path(path)?,
+                image_base64: None,
+            })
+        }
         other => Err(format!("herramienta desconocida: {other}").into()),
     }
 }
