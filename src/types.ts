@@ -73,3 +73,14 @@ export interface ErrorPayload {
   conversationId: string;
   message: string;
 }
+
+export interface DiagnosticItem {
+  name: string;
+  ok: boolean;
+  detail: string;
+}
+
+export interface Diagnostics {
+  host: string;
+  items: DiagnosticItem[];
+}

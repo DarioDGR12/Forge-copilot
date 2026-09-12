@@ -4,9 +4,11 @@ type TitlebarProps = {
   view: "chat" | "settings";
   onView: (view: "chat" | "settings") => void;
   onNew: () => void;
+  onExport?: () => void;
+  canExport?: boolean;
 };
 
-export function Titlebar({ view, onView, onNew }: TitlebarProps) {
+export function Titlebar({ view, onView, onNew, onExport, canExport }: TitlebarProps) {
   return (
     <header className="titlebar" data-tauri-drag-region>
       <div className="brand" data-tauri-drag-region>
@@ -24,6 +26,16 @@ export function Titlebar({ view, onView, onNew }: TitlebarProps) {
       >
         Nueva
       </button>
+      {onExport && canExport ? (
+        <button
+          type="button"
+          className="ghost new-overlay"
+          data-testid="export-chat"
+          onClick={onExport}
+        >
+          Exportar
+        </button>
+      ) : null}
       <nav className="tabs">
         <button
           className={view === "chat" ? "tab active" : "tab"}

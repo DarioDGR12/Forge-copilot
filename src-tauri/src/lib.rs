@@ -1,4 +1,5 @@
 mod agent;
+mod diagnostics;
 mod error;
 mod host;
 mod llm;
@@ -170,6 +171,11 @@ async fn test_connection(state: tauri::State<'_, Arc<AppState>>) -> Result<Strin
 }
 
 #[tauri::command]
+fn system_diagnostics() -> crate::diagnostics::Diagnostics {
+    crate::diagnostics::collect()
+}
+
+#[tauri::command]
 fn window_hide(app: tauri::AppHandle) {
     windows::hide(&app);
 }
@@ -202,6 +208,7 @@ pub fn run() {
             clear_api_key,
             key_status,
             test_connection,
+            system_diagnostics,
             window_hide,
             window_toggle
         ])

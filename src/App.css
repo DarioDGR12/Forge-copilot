@@ -406,6 +406,65 @@ button {
   outline-offset: -8px;
 }
 
+.settings h3 {
+  margin: 16px 0 0;
+  font-size: 16px;
+}
+
+.diagnostics {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diag-host {
+  margin: 0;
+  font-size: 12px;
+}
+
+.diag-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.diag-list li {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #171717;
+}
+
+.diag-list li.ok {
+  border-left: 3px solid var(--ok);
+}
+
+.diag-list li.miss {
+  border-left: 3px solid var(--warn);
+}
+
+.diag-mark {
+  font-size: 11px;
+  color: var(--ok);
+  min-width: 36px;
+}
+
+.diag-list li.miss .diag-mark {
+  color: var(--warn);
+}
+
+.diag-list small {
+  display: block;
+  color: var(--muted);
+}
+
 .composer textarea,
 .settings input,
 .settings select,

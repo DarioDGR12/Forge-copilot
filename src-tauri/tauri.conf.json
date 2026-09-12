@@ -34,6 +34,11 @@
   "bundle": {
     "active": true,
     "targets": ["deb", "appimage"],
+    "category": "Utility",
+    "shortDescription": "Copilot local para Pop!_OS",
+    "longDescription": "Overlay de chat con BYOK, terminal, archivos, capturas y Computer Use lite. Las acciones peligrosas piden confirmación. Sin backend propio.",
+    "copyright": "Unlicense",
+    "homepage": "https://github.com/DarioDGR12/Forge-copilot",
     "linux": {
       "deb": {
         "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0"]

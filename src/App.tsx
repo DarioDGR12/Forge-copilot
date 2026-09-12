@@ -4,6 +4,7 @@ import { Chat } from "./components/Chat";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { Sidebar } from "./components/Sidebar";
 import { Titlebar } from "./components/Titlebar";
+import { conversationMarkdown, downloadText } from "./lib/export";
 import { api, isTauri, listen } from "./lib/bridge";
 import type { ApprovalRequest, ChatMessage, Conversation, Settings } from "./types";
 import "./App.css";
@@ -162,15 +163,40 @@ export default function App() {
     return [...messages, ...pendingTools, ...extra];
   }, [messages, liveTools, streamText, activeId]);
 
+  function exportActive() {
+    const kept = messages.filter((m) => m.id !== "stream");
+    if (!kept.length) return;
+    const title = conversations.find((c) => c.id === activeId)?.title ?? "conversacion";
+    const safe = title.replace(/[^\wáéíóúñ.-]+/gi, "-").slice(0, 40) || "chat";
+    downloadText(`forge-${safe}.md`, conversationMarkdown(kept, title));
+  }
+
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
-      if (approval) return;
-      if (isTauri()) void api.windowHide();
+      const mod = event.ctrlKey || event.metaKey;
+      if (event.key === "Escape") {
+        if (approval) return;
+        if (isTauri()) void api.windowHide();
+        return;
+      }
+      if (mod && event.key.toLowerCase() === "n") {
+        event.preventDefault();
+        void handleNew();
+        return;
+      }
+      if (mod && event.key === ",") {
+        event.preventDefault();
+        setView("settings");
+        return;
+      }
+      if (mod && event.key.toLowerCase() === "e") {
+        event.preventDefault();
+        exportActive();
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [approval]);
+  }, [approval, messages, conversations, activeId]);
 
   async function handleSend(text: string, retry = false) {
     if (sendingRef.current) return;
@@ -238,7 +264,13 @@ export default function App() {
 
   return (
     <div className="shell">
-      <Titlebar view={view} onView={setView} onNew={() => void handleNew()} />
+      <Titlebar
+        view={view}
+        onView={setView}
+        onNew={() => void handleNew()}
+        onExport={exportActive}
+        canExport={messages.some((m) => m.id !== "stream")}
+      />
       <div className="body">
         <Sidebar
           items={conversations}

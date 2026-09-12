@@ -448,6 +448,20 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
     }
     case "key_status":
       return keyStatus(String(args?.provider ?? "demo")) as T;
+    case "system_diagnostics":
+      return {
+        host: "usuario=demo\nhostname=pop-os\nos=Pop!_OS 24.04 LTS\ndesktop=COSMIC\nhome=/home/dario",
+        items: [
+          { name: "Captura", ok: true, detail: "demo · grim" },
+          { name: "Portapapeles", ok: true, detail: "demo · wl-paste" },
+          { name: "Notificaciones", ok: true, detail: "demo · notify-send" },
+          { name: "Ventanas", ok: true, detail: "demo · wmctrl" },
+          { name: "Teclado / ratón", ok: false, detail: "en el navegador no se teclea de verdad" },
+          { name: "Abrir rutas", ok: true, detail: "demo · xdg-open" },
+          { name: "Lanzar apps", ok: true, detail: "demo · gtk-launch" },
+          { name: "Shell", ok: true, detail: "/usr/bin/bash" },
+        ],
+      } as T;
     case "test_connection":
       if (settings.provider === "demo") {
         return "Modo demostración listo (no requiere clave)" as T;

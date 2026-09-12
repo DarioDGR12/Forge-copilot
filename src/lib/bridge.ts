@@ -4,6 +4,7 @@ import type {
   Conversation,
   DonePayload,
   ErrorPayload,
+  Diagnostics,
   KeyStatus,
   Settings,
   TokenPayload,
@@ -53,6 +54,7 @@ export const api = {
   clearApiKey: (provider: string) => invoke<KeyStatus>("clear_api_key", { provider }),
   keyStatus: (provider: string) => invoke<KeyStatus>("key_status", { provider }),
   testConnection: () => invoke<string>("test_connection"),
+  systemDiagnostics: () => invoke<Diagnostics>("system_diagnostics"),
   windowHide: () => invoke<void>("window_hide"),
   windowToggle: () => invoke<void>("window_toggle"),
 };

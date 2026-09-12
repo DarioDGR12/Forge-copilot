@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/bridge";
-import type { KeyStatus, Settings } from "../types";
+import type { Diagnostics, KeyStatus, Settings } from "../types";
 
 const DEFAULT_MODELS: Record<string, string> = {
   demo: "forge-demo",
@@ -28,12 +28,15 @@ export function SettingsPanel({ onSaved }: SettingsPanelProps) {
   const [status, setStatus] = useState<KeyStatus | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [diag, setDiag] = useState<Diagnostics | null>(null);
 
   async function reload(provider?: string) {
     const next = await api.getSettings();
     setSettings(next);
     const st = await api.keyStatus(provider ?? next.provider);
     setStatus(st);
+    const d = await api.systemDiagnostics();
+    setDiag(d);
   }
 
   useEffect(() => {
@@ -239,6 +242,30 @@ export function SettingsPanel({ onSaved }: SettingsPanelProps) {
         </button>
       </div>
       {notice ? <p className="notice">{notice}</p> : null}
+
+      <h3>Estado del sistema</h3>
+      <p className="muted">
+        Qué herramientas encontró Forge en este equipo. En Pop!_OS instala las que falten; en el
+        navegador es una simulación.
+      </p>
+      {diag ? (
+        <div className="diagnostics" data-testid="diagnostics">
+          <pre className="diag-host">{diag.host}</pre>
+          <ul className="diag-list">
+            {diag.items.map((item) => (
+              <li key={item.name} className={item.ok ? "ok" : "miss"}>
+                <span className="diag-mark">{item.ok ? "listo" : "falta"}</span>
+                <span>
+                  <strong>{item.name}</strong>
+                  <small>{item.detail}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="muted">Cargando diagnóstico…</p>
+      )}
     </section>
   );
 }
