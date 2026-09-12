@@ -39,9 +39,10 @@ pub fn assess(tool: &str, args: &Value, allowed_roots: &[String]) -> Risk {
         | "list_processes"
         | "screenshot"
         | "host_info"
-        | "clipboard_read"
+        |         "clipboard_read"
         | "list_windows"
-        | "notify" => Risk::AutoAllow,
+        | "notify"
+        | "pointer_info" => Risk::AutoAllow,
         "list_dir" | "read_file" => assess_read(tool, args_path(args), allowed_roots),
         "open_path" => assess_open(args_path(args), allowed_roots),
         "launch_app" => {
@@ -74,6 +75,36 @@ pub fn assess(tool: &str, args: &Value, allowed_roots: &[String]) -> Risk {
             Risk::NeedsApproval {
                 reason: format!("Enfocar ventana: {query}"),
                 sensitive: false,
+            }
+        }
+        "type_text" => {
+            let text = args.get("text").and_then(|v| v.as_str()).unwrap_or("");
+            let preview: String = text.chars().take(80).collect();
+            Risk::NeedsApproval {
+                reason: format!(
+                    "Teclear en la ventana activa (Forge se ocultará): «{preview}»"
+                ),
+                sensitive: true,
+            }
+        }
+        "press_keys" => {
+            let keys = args.get("keys").and_then(|v| v.as_str()).unwrap_or("");
+            Risk::NeedsApproval {
+                reason: format!("Pulsar teclas en la ventana activa: {keys}"),
+                sensitive: true,
+            }
+        }
+        "mouse_click" => {
+            let x = args.get("x").and_then(|v| v.as_i64());
+            let y = args.get("y").and_then(|v| v.as_i64());
+            let button = args.get("button").and_then(|v| v.as_str()).unwrap_or("left");
+            let where_ = match (x, y) {
+                (Some(x), Some(y)) => format!("{x},{y}"),
+                _ => "posición actual".into(),
+            };
+            Risk::NeedsApproval {
+                reason: format!("Clic {button} en {where_} (Forge se ocultará)"),
+                sensitive: true,
             }
         }
         "write_file" => assess_write(args_path(args), allowed_roots),
@@ -383,6 +414,40 @@ mod tests {
             Risk::NeedsApproval { sensitive, reason } => {
                 assert!(!sensitive);
                 assert!(reason.contains("Firefox"));
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+    }
+
+    #[test]
+    fn pointer_info_is_auto() {
+        assert_eq!(
+            assess("pointer_info", &json!({}), &home_roots()),
+            Risk::AutoAllow
+        );
+    }
+
+    #[test]
+    fn input_tools_are_sensitive() {
+        match assess("type_text", &json!({"text": "hola"}), &home_roots()) {
+            Risk::NeedsApproval { sensitive, reason } => {
+                assert!(sensitive);
+                assert!(reason.contains("hola"));
+            }
+            other => panic!("unexpected {other:?}"),
+        }
+        match assess("press_keys", &json!({"keys": "ctrl+c"}), &home_roots()) {
+            Risk::NeedsApproval { sensitive, .. } => assert!(sensitive),
+            other => panic!("unexpected {other:?}"),
+        }
+        match assess(
+            "mouse_click",
+            &json!({"x": 10, "y": 20, "button": "left"}),
+            &home_roots(),
+        ) {
+            Risk::NeedsApproval { sensitive, reason } => {
+                assert!(sensitive);
+                assert!(reason.contains("10,20"));
             }
             other => panic!("unexpected {other:?}"),
         }

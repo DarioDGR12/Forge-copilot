@@ -182,6 +182,10 @@ async fn run_inner(
                         status: "running".into(),
                     },
                 );
+                if tools::input::hides_overlay(&call.name) {
+                    crate::windows::hide(app);
+                    tokio::time::sleep(Duration::from_millis(400)).await;
+                }
                 match tools::execute(&call.name, &args).await {
                     Ok(outcome) => {
                         tool_msg.content = outcome.text.clone();

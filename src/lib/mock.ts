@@ -74,6 +74,28 @@ function inferTool(text: string): { name: string; args: Record<string, unknown> 
     const quoted = text.match(/["«]([^"»]+)["»]/);
     return { name: "notify", args: { title: "Forge Copilot", body: quoted?.[1] ?? "Hola desde Forge" } };
   }
+  if (t.includes("teclea") || t.includes("tipea") || t.includes("en el teclado")) {
+    const quoted = text.match(/["«]([^"»]+)["»]/);
+    const typed = quoted?.[1] ?? (text.replace(/^(teclea|tipea|type)\s+/i, "").trim() || "hola");
+    return { name: "type_text", args: { text: typed } };
+  }
+  if (t.includes("pulsa ") || t.includes("presiona ") || t.includes("press ")) {
+    const keys = text.replace(/^(pulsa|presiona|press)\s+/i, "").trim() || "Return";
+    const mapped = /^(enter|intro|return)$/i.test(keys) ? "Return" : keys;
+    return { name: "press_keys", args: { keys: mapped } };
+  }
+  if (t.includes("haz clic") || t.includes("clic en") || t.includes("mouse_click")) {
+    const nums = text.match(/\d+/g);
+    const args: Record<string, unknown> = { button: "left" };
+    if (nums && nums.length >= 2) {
+      args.x = Number(nums[0]);
+      args.y = Number(nums[1]);
+    }
+    return { name: "mouse_click", args };
+  }
+  if (t.includes("puntero") || t.includes("ratón") || t.includes("raton")) {
+    return { name: "pointer_info", args: {} };
+  }
   if (t.includes("abre ") || t.includes("abrir ") || t.includes("lanza ")) {
     if (t.includes("documento") || t.includes("home") || t.includes("carpeta")) {
       return { name: "open_path", args: { path: "~/Documents" } };
@@ -128,6 +150,14 @@ function mockToolResult(name: string, args: Record<string, unknown>): string {
       return "2 ventanas\n0x03c00007  Firefox\n0x02a00001  Forge Copilot";
     case "focus_window":
       return `enfocada: ${String(args.query ?? "Firefox")}`;
+    case "type_text":
+      return `tecleados ${String(args.text ?? "").length} caracteres (demo)`;
+    case "press_keys":
+      return `pulsado ${String(args.keys ?? "Return")} (demo)`;
+    case "mouse_click":
+      return `clic ${String(args.button ?? "left")} (demo)`;
+    case "pointer_info":
+      return "X=120\nY=340\nSCREEN=0";
     default:
       return "ok";
   }
@@ -139,7 +169,10 @@ function needsApproval(name: string): boolean {
     name === "write_file" ||
     name === "launch_app" ||
     name === "clipboard_write" ||
-    name === "focus_window"
+    name === "focus_window" ||
+    name === "type_text" ||
+    name === "press_keys" ||
+    name === "mouse_click"
   );
 }
 
@@ -192,8 +225,8 @@ async function runDemoAgent(conversationId: string) {
             requestId: callId,
             name: tool.name,
             arguments: JSON.stringify(tool.args, null, 2),
-            reason: `Comando: ${String(tool.args.command ?? tool.name)}`,
-            sensitive: false,
+            reason: `Comando: ${String(tool.args.command ?? tool.args.text ?? tool.args.keys ?? tool.name)}`,
+            sensitive: tool.name === "type_text" || tool.name === "press_keys" || tool.name === "mouse_click",
           } satisfies ApprovalRequest);
         });
       }

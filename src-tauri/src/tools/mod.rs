@@ -1,6 +1,7 @@
 pub mod apps;
 pub mod clipboard;
 pub mod fs;
+pub mod input;
 pub mod notify;
 pub mod processes;
 pub mod screenshot;
@@ -129,6 +130,33 @@ pub async fn execute(name: &str, args: &Value) -> AppResult<ToolOutcome> {
                 image_base64: None,
             })
         }
+        "type_text" => {
+            let text = args.get("text").and_then(|v| v.as_str()).unwrap_or("");
+            Ok(ToolOutcome {
+                text: input::type_text(text)?,
+                image_base64: None,
+            })
+        }
+        "press_keys" => {
+            let keys = args.get("keys").and_then(|v| v.as_str()).unwrap_or("");
+            Ok(ToolOutcome {
+                text: input::press_keys(keys)?,
+                image_base64: None,
+            })
+        }
+        "mouse_click" => {
+            let x = args.get("x").and_then(|v| v.as_i64());
+            let y = args.get("y").and_then(|v| v.as_i64());
+            let button = args.get("button").and_then(|v| v.as_str()).unwrap_or("left");
+            Ok(ToolOutcome {
+                text: input::mouse_click(x, y, button)?,
+                image_base64: None,
+            })
+        }
+        "pointer_info" => Ok(ToolOutcome {
+            text: input::pointer_info()?,
+            image_base64: None,
+        }),
         other => Err(format!("herramienta desconocida: {other}").into()),
     }
 }

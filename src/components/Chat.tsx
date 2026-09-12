@@ -17,6 +17,7 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
   const [attachName, setAttachName] = useState<string | null>(null);
   const [attachText, setAttachText] = useState<string | null>(null);
   const [attachError, setAttachError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const locked = useRef(false);
@@ -71,8 +72,34 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
 
   const canSend = Boolean(draft.trim() || attachText);
 
+  function sendPreset(text: string) {
+    if (streaming || locked.current) return;
+    locked.current = true;
+    onSend(text);
+  }
+
   return (
-    <section className="chat">
+    <section
+      className={dragging ? "chat drag-over" : "chat"}
+      data-testid="chat-drop"
+      onDragEnter={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+        setDragging(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragging(false);
+        onPickFile(e.dataTransfer.files?.[0]);
+      }}
+    >
       <div className="transcript">
         {messages.length === 0 ? (
           <div className="hero">
@@ -88,6 +115,7 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
                   ["chip-files", "Lista los archivos de mi home"],
                   ["chip-clipboard", "Qué hay en el portapapeles"],
                   ["chip-windows", "Lista las ventanas"],
+                  ["chip-type", "Teclea hola"],
                   ["chip-docs", "Abre Documentos"],
                   ["chip-uname", "Ejecuta `uname -a`"],
                 ] as const
@@ -98,11 +126,7 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
                   className="chip"
                   data-testid={id}
                   disabled={streaming}
-                  onClick={() => {
-                    if (streaming || locked.current) return;
-                    locked.current = true;
-                    onSend(chip);
-                  }}
+                  onClick={() => sendPreset(chip)}
                 >
                   {chip}
                 </button>
@@ -170,6 +194,15 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
             onClick={() => fileRef.current?.click()}
           >
             Adjuntar
+          </button>
+          <button
+            type="button"
+            className="ghost"
+            data-testid="screenshot"
+            disabled={streaming}
+            onClick={() => sendPreset("captura la pantalla")}
+          >
+            Captura
           </button>
           {streaming ? (
             <button type="button" className="ghost" data-testid="cancel-send" onClick={onCancel}>

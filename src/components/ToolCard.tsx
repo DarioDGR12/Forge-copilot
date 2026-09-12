@@ -20,6 +20,10 @@ const LABELS: Record<string, string> = {
   notify: "Notificación",
   list_windows: "Ventanas",
   focus_window: "Enfocar",
+  type_text: "Teclado",
+  press_keys: "Teclas",
+  mouse_click: "Clic",
+  pointer_info: "Puntero",
 };
 
 export function ToolCard({ message }: ToolCardProps) {

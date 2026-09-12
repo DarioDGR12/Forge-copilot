@@ -71,11 +71,11 @@ pub struct AssistantTurn {
 
 pub const SYSTEM_PROMPT: &str = "\
 Eres Forge Copilot, un asistente de escritorio local para Pop!_OS y Linux.
-Ayudas con la terminal, archivos, aplicaciones, procesos, capturas, portapapeles, ventanas y notificaciones.
+Ayudas con la terminal, archivos, aplicaciones, procesos, capturas, portapapeles, ventanas, notificaciones y entrada (teclado/ratón).
 Responde en el idioma del usuario (por defecto español). Sé claro y conciso.
 Usa herramientas cuando necesites datos reales del sistema; no inventes salidas de comandos.
-Puedes listar/abrir archivos, lanzar apps .desktop, ver procesos, capturar la pantalla, leer/escribir el portapapeles, listar/enfocar ventanas (wmctrl) y enviar notificaciones.
-En COSMIC/Wayland wmctrl o el portapapeles pueden faltar: explica el error, no simules clics.
+Puedes listar/abrir archivos, lanzar apps .desktop, ver procesos, capturar la pantalla, leer/escribir el portapapeles, listar/enfocar ventanas (wmctrl), enviar notificaciones, teclear, pulsar atajos y hacer clic.
+Teclear/clic oculta el overlay para no robar el foco. En COSMIC/Wayland hace falta ydotool (o xdotool en X11); si faltan, explica el error — no simules clics.
 Explica en una frase qué vas a hacer antes o después de una herramienta.
 No intentes atacar otras máquinas, no hagas phishing ni uses la red de forma ofensiva.
 Las acciones peligrosas las confirmará el usuario en la interfaz.";
@@ -263,6 +263,57 @@ pub fn tool_specs() -> serde_json::Value {
                     "required": ["query"]
                 }
             }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "type_text",
+                "description": "Teclea texto en la ventana activa (ydotool, xdotool o wtype). Forge se oculta antes. Pide confirmación.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": { "type": "string" }
+                    },
+                    "required": ["text"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "press_keys",
+                "description": "Pulsa un atajo (ctrl+c, Return, alt+Tab). Solo teclas de una lista blanca. Pide confirmación.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "keys": { "type": "string", "description": "Atajo, por ejemplo ctrl+c o Return" }
+                    },
+                    "required": ["keys"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "mouse_click",
+                "description": "Clic izquierdo/derecho/central. Coordenadas opcionales. Pide confirmación.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "x": { "type": "integer" },
+                        "y": { "type": "integer" },
+                        "button": { "type": "string", "description": "left, right o middle" }
+                    }
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "pointer_info",
+                "description": "Posición del puntero (xdotool). En Wayland puro suele fallar.",
+                "parameters": { "type": "object", "properties": {} }
+            }
         }
     ])
 }
@@ -391,6 +442,41 @@ pub fn anthropic_tools() -> serde_json::Value {
                 "properties": { "query": { "type": "string" } },
                 "required": ["query"]
             }
+        },
+        {
+            "name": "type_text",
+            "description": "Teclea texto en la ventana activa. Pide confirmación.",
+            "input_schema": {
+                "type": "object",
+                "properties": { "text": { "type": "string" } },
+                "required": ["text"]
+            }
+        },
+        {
+            "name": "press_keys",
+            "description": "Pulsa un atajo de teclado de la lista blanca. Pide confirmación.",
+            "input_schema": {
+                "type": "object",
+                "properties": { "keys": { "type": "string" } },
+                "required": ["keys"]
+            }
+        },
+        {
+            "name": "mouse_click",
+            "description": "Clic del ratón. Coordenadas opcionales. Pide confirmación.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "x": { "type": "integer" },
+                    "y": { "type": "integer" },
+                    "button": { "type": "string" }
+                }
+            }
+        },
+        {
+            "name": "pointer_info",
+            "description": "Posición del puntero.",
+            "input_schema": { "type": "object", "properties": {} }
         }
     ])
 }

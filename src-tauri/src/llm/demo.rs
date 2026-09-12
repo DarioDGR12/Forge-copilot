@@ -9,6 +9,7 @@ Prueba:
 - «lista los archivos de mi home»
 - «qué hay en el portapapeles»
 - «lista las ventanas»
+- «teclea hola»
 - «abre Documentos»
 - «abre Firefox»
 - «ejecuta `uname -a`»
@@ -100,6 +101,33 @@ pub fn infer_tool(text: &str) -> Option<ToolCall> {
             .unwrap_or_else(|| "Hola desde Forge".into());
         let args = serde_json::json!({ "title": "Forge Copilot", "body": body });
         return Some(call("notify", &args.to_string()));
+    }
+    if contains_any(&t, &["teclea", "tipea", "en el teclado", "type_text"]) {
+        let typed = extract_quoted(text)
+            .or_else(|| extract_after_prefix(text, &["teclea ", "tipea ", "type "]))
+            .unwrap_or_else(|| "hola".into());
+        let args = serde_json::json!({ "text": typed });
+        return Some(call("type_text", &args.to_string()));
+    }
+    if contains_any(&t, &["pulsa ", "presiona ", "press ", "atajo "]) {
+        let keys = extract_quoted(text)
+            .or_else(|| extract_after_prefix(text, &["pulsa ", "presiona ", "press ", "atajo "]))
+            .unwrap_or_else(|| "Return".into());
+        let keys = normalize_demo_keys(&keys);
+        let args = serde_json::json!({ "keys": keys });
+        return Some(call("press_keys", &args.to_string()));
+    }
+    if contains_any(&t, &["haz clic", "hacer clic", "clic en", "mouse_click"]) {
+        let (x, y) = extract_coords(text);
+        let mut obj = serde_json::json!({ "button": "left" });
+        if let (Some(x), Some(y)) = (x, y) {
+            obj["x"] = x.into();
+            obj["y"] = y.into();
+        }
+        return Some(call("mouse_click", &obj.to_string()));
+    }
+    if contains_any(&t, &["puntero", "dónde está el ratón", "donde esta el raton", "mouse location"]) {
+        return Some(call("pointer_info", "{}"));
     }
     if contains_any(&t, &["proceso", "process", "cpu"]) {
         return Some(call("list_processes", r#"{"limit":25}"#));
@@ -218,6 +246,28 @@ fn extract_after_prefix(text: &str, prefixes: &[&str]) -> Option<String> {
     None
 }
 
+fn normalize_demo_keys(raw: &str) -> String {
+    let t = raw.trim().trim_matches(|c| c == '"' || c == '.' || c == '!').to_lowercase();
+    match t.as_str() {
+        "enter" | "intro" | "return" => "Return".into(),
+        "escape" | "esc" => "Escape".into(),
+        "tab" => "Tab".into(),
+        other => other.to_string(),
+    }
+}
+
+fn extract_coords(text: &str) -> (Option<i64>, Option<i64>) {
+    let nums: Vec<i64> = text
+        .split(|c: char| !c.is_ascii_digit())
+        .filter_map(|s| s.parse().ok())
+        .collect();
+    if nums.len() >= 2 {
+        (Some(nums[0]), Some(nums[1]))
+    } else {
+        (None, None)
+    }
+}
+
 fn extract_path(text: &str) -> Option<String> {
     text.split_whitespace()
         .find(|w| w.starts_with('/') || w.starts_with("~/") || w.starts_with('.'))
@@ -322,5 +372,27 @@ mod tests {
         let call = infer_tool("notifica «Reunión en 5»").unwrap();
         assert_eq!(call.name, "notify");
         assert!(call.arguments.contains("Reunión en 5"));
+    }
+
+    #[test]
+    fn infers_type_text() {
+        let call = infer_tool("teclea hola").unwrap();
+        assert_eq!(call.name, "type_text");
+        assert!(call.arguments.contains("hola"));
+    }
+
+    #[test]
+    fn infers_press_enter() {
+        let call = infer_tool("pulsa enter").unwrap();
+        assert_eq!(call.name, "press_keys");
+        assert!(call.arguments.contains("Return"));
+    }
+
+    #[test]
+    fn infers_click_coords() {
+        let call = infer_tool("haz clic en 100 200").unwrap();
+        assert_eq!(call.name, "mouse_click");
+        assert!(call.arguments.contains("100"));
+        assert!(call.arguments.contains("200"));
     }
 }

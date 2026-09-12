@@ -11,9 +11,10 @@ Este repositorio es la app que corre **en tu máquina**. No es un servicio en la
 - Chat con Markdown, historial SQLite y bloques de herramientas
 - Proveedores: demostración, OpenAI, Anthropic, OpenRouter, Ollama
 - Claves en el keyring de Linux (`secret-service`); si no hay llavero, archivo `0600` en `~/.local/share/forge-copilot/secrets.json`
-- Tools: `run_terminal`, `read_file`, `write_file`, `list_dir`, `list_apps`, `list_processes`, `screenshot`, `host_info`, `launch_app`, `open_path`, `clipboard_read`, `clipboard_write`, `notify`, `list_windows`, `focus_window`
+- Tools: `run_terminal`, `read_file`, `write_file`, `list_dir`, `list_apps`, `list_processes`, `screenshot`, `host_info`, `launch_app`, `open_path`, `clipboard_read`, `clipboard_write`, `notify`, `list_windows`, `focus_window`, `type_text`, `press_keys`, `mouse_click`, `pointer_info`
 - Adjuntar un archivo de texto al mensaje (32 KB) y barra de estado con proveedor, modelo y atajo
-- Política: lecturas, portapapeles (lectura), ventanas, notificaciones y abrir rutas dentro de `$HOME` en automático; shell, lanzar apps, escribir archivos o portapapeles, enfocar ventanas y rutas sensibles piden Allow/Deny
+- Política: lecturas, portapapeles (lectura), ventanas, notificaciones y abrir rutas dentro de `$HOME` en automático; shell, lanzar apps, escribir archivos o portapapeles, enfocar ventanas, teclear, atajos, clics y rutas sensibles piden Allow/Deny
+- Computer Use lite: teclado/ratón con lista blanca de teclas. El overlay se oculta antes de teclear. No hay vision-loop ni clics simulados si faltan `xdotool`/`ydotool`
 
 ## Requisitos en Pop!_OS
 
@@ -28,10 +29,12 @@ sudo apt install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchel
 Herramientas de escritorio opcionales:
 
 ```bash
-sudo apt install grim wl-clipboard xclip libnotify-bin wmctrl
+sudo apt install grim wl-clipboard xclip libnotify-bin wmctrl xdotool
 ```
 
-En COSMIC/Wayland `wmctrl` a menudo no lista ventanas: Forge lo dice, no simula clics. Portapapeles usa `wl-copy`/`wl-paste` o `xclip`/`xsel`.
+Opcional en Wayland/COSMIC para teclado/ratón: `ydotool` y el daemon `ydotoold` (tu usuario en el grupo `input`).
+
+En COSMIC/Wayland `wmctrl` a menudo no lista ventanas y `xdotool` no ve el compositor: Forge lo dice, no simula clics. Portapapeles usa `wl-copy`/`wl-paste` o `xclip`/`xsel`. El atajo `type_text` / `press_keys` / `mouse_click` siempre pide confirmación y oculta el panel para no robar el foco.
 
 ## Desarrollo
 

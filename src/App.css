@@ -373,6 +373,11 @@ button {
   margin-left: auto;
 }
 
+.chat.drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: -8px;
+}
+
 .composer textarea,
 .settings input,
 .settings select,
