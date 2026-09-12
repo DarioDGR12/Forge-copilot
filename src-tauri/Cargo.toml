@@ -1,0 +1,36 @@
+[package]
+name = "forge-copilot"
+version = "0.1.0"
+description = "Asistente de escritorio para Pop!_OS"
+authors = ["Forge Copilot"]
+edition = "2021"
+
+[lib]
+name = "forge_copilot_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-opener = "2"
+tauri-plugin-global-shortcut = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "process", "time", "sync"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+keyring = "2"
+sysinfo = "0.33"
+dirs = "5"
+uuid = { version = "1", features = ["v4", "serde"] }
+futures-util = "0.3"
+base64 = "0.22"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true
