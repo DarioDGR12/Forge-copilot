@@ -278,8 +278,12 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
         conversations.set(conv.id, conv);
         messages.set(conv.id, []);
       }
-      pushMessage(conv.id, { role: "user", content });
-      void runDemoAgent(conv.id);
+      const existing = messages.get(conv.id) ?? [];
+      const last = existing[existing.length - 1];
+      if (!(last?.role === "user" && last.content === content)) {
+        pushMessage(conv.id, { role: "user", content });
+        void runDemoAgent(conv.id);
+      }
       return conv as T;
     }
     case "cancel_run":

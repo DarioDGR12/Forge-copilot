@@ -137,7 +137,15 @@ export function SettingsPanel({ onSaved }: SettingsPanelProps) {
         <input
           value={settings.baseUrl}
           onChange={(e) => setSettings({ ...settings, baseUrl: e.target.value })}
-          placeholder="https://openrouter.ai/api/v1"
+          placeholder={
+            settings.provider === "ollama"
+              ? "http://127.0.0.1:11434/v1"
+              : settings.provider === "openai"
+                ? "https://api.openai.com/v1"
+                : settings.provider === "anthropic"
+                  ? "https://api.anthropic.com"
+                  : "https://openrouter.ai/api/v1"
+          }
         />
       </label>
 
@@ -181,12 +189,23 @@ export function SettingsPanel({ onSaved }: SettingsPanelProps) {
       </p>
 
       <div className="settings-actions">
-        <button type="button" className="primary" disabled={busy} onClick={() => void save()}>
+        <button
+          type="button"
+          className="primary"
+          data-testid="save-settings"
+          disabled={busy}
+          onClick={() => void save()}
+        >
           Guardar
         </button>
         {needsKey || settings.provider === "openai" || settings.provider === "anthropic" || settings.provider === "openrouter" ? (
           <>
-            <button type="button" disabled={busy || !key} onClick={() => void saveKey()}>
+            <button
+              type="button"
+              data-testid="save-key"
+              disabled={busy || !key}
+              onClick={() => void saveKey()}
+            >
               Guardar clave
             </button>
             <button type="button" className="ghost" disabled={!status?.configured} onClick={() => void clearKey()}>
@@ -194,7 +213,13 @@ export function SettingsPanel({ onSaved }: SettingsPanelProps) {
             </button>
           </>
         ) : null}
-        <button type="button" className="ghost" disabled={busy} onClick={() => void test()}>
+        <button
+          type="button"
+          className="ghost"
+          data-testid="test-connection"
+          disabled={busy}
+          onClick={() => void test()}
+        >
           Probar conexión
         </button>
       </div>

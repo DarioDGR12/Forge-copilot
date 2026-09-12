@@ -13,14 +13,20 @@ type ChatProps = {
 export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps) {
   const [draft, setDraft] = useState("");
   const endRef = useRef<HTMLDivElement | null>(null);
+  const locked = useRef(false);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
 
+  useEffect(() => {
+    if (!streaming) locked.current = false;
+  }, [streaming]);
+
   function submit() {
     const text = draft.trim();
-    if (!text || streaming) return;
+    if (!text || streaming || locked.current) return;
+    locked.current = true;
     onSend(text);
     setDraft("");
   }
@@ -47,14 +53,9 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
         <div ref={endRef} />
       </div>
       {error ? <p className="error-bar">{error}</p> : null}
-      <form
-        className="composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit();
-        }}
-      >
+      <div className="composer">
         <textarea
+          data-testid="composer"
           value={draft}
           placeholder="Pregunta o pide una acción en tu sistema…"
           rows={2}
@@ -62,20 +63,27 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
+              e.stopPropagation();
               submit();
             }
           }}
         />
         {streaming ? (
-          <button type="button" className="ghost" onClick={onCancel}>
+          <button type="button" className="ghost" data-testid="cancel-send" onClick={onCancel}>
             Detener
           </button>
         ) : (
-          <button type="submit" className="primary" disabled={!draft.trim()}>
+          <button
+            type="button"
+            className="primary"
+            data-testid="send"
+            disabled={!draft.trim()}
+            onClick={submit}
+          >
             Enviar
           </button>
         )}
-      </form>
+      </div>
     </section>
   );
 }

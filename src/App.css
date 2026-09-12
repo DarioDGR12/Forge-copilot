@@ -12,7 +12,7 @@
   --danger: #e35d6a;
   --ok: #6bcb8b;
   --warn: #f0c674;
-  font-family: "Ubuntu", "Cantarell", "Inter", "Segoe UI", sans-serif;
+  font-family: system-ui, "Noto Sans", "DejaVu Sans", Ubuntu, sans-serif;
 }
 
 * {
@@ -214,7 +214,7 @@ button {
 .hero h1 {
   margin: 0 0 8px;
   font-size: 28px;
-  letter-spacing: -0.03em;
+  letter-spacing: 0;
 }
 
 .hero ul {

@@ -19,6 +19,8 @@ export default function App() {
   const [approval, setApproval] = useState<ApprovalRequest | null>(null);
   const [error, setError] = useState<string | null>(null);
   const activeRef = useRef<string | null>(null);
+  const sendingRef = useRef(false);
+  const loadGen = useRef(0);
 
   const refreshConversations = useCallback(async () => {
     const list = await api.listConversations();
@@ -27,7 +29,9 @@ export default function App() {
   }, []);
 
   const loadMessages = useCallback(async (id: string) => {
+    const gen = ++loadGen.current;
     const list = await api.getMessages(id);
+    if (gen !== loadGen.current) return;
     setMessages(list);
     setLiveTools([]);
     setStreamText("");
@@ -117,6 +121,7 @@ export default function App() {
         if (!matches(payload.conversationId)) return;
         activeRef.current = payload.conversationId;
         setActiveId(payload.conversationId);
+        sendingRef.current = false;
         setStreaming(false);
         setApproval(null);
         void loadMessages(payload.conversationId);
@@ -156,25 +161,38 @@ export default function App() {
   }, [messages, liveTools, streamText, activeId]);
 
   async function handleSend(text: string) {
+    if (sendingRef.current) return;
+    sendingRef.current = true;
+    loadGen.current += 1;
     setError(null);
     setStreaming(true);
     setStreamText("");
     setLiveTools([]);
-    const optimistic: ChatMessage = {
-      id: `local-${Date.now()}`,
-      conversationId: activeId ?? "pending",
-      role: "user",
-      content: text,
-      createdAt: Date.now() / 1000,
-    };
-    setMessages((prev) => [...prev, optimistic]);
+    const localId = `local-${Date.now()}`;
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.role === "user" && last.content === text) {
+        return prev;
+      }
+      return [
+        ...prev,
+        {
+          id: localId,
+          conversationId: activeId ?? "pending",
+          role: "user",
+          content: text,
+          createdAt: Date.now() / 1000,
+        },
+      ];
+    });
     try {
-      activeRef.current = activeId;
       const conv = await api.sendMessage(activeId, text);
       activeRef.current = conv.id;
       setActiveId(conv.id);
+      await loadMessages(conv.id);
       await refreshConversations();
     } catch (err) {
+      sendingRef.current = false;
       setStreaming(false);
       setError(err instanceof Error ? err.message : String(err));
     }
