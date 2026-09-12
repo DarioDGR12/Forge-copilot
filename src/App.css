@@ -312,9 +312,14 @@ button {
 }
 
 .shot {
-  width: 100%;
+  display: block;
+  max-width: 100%;
+  height: auto;
+  max-height: 240px;
+  object-fit: contain;
   border-radius: 8px;
   margin-top: 8px;
+  background: #0e0e0e;
 }
 
 .composer {
