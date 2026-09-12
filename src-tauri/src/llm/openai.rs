@@ -77,7 +77,8 @@ pub async fn test_connection(
     }
 }
 
-fn to_openai_messages(messages: &[ChatMessage]) -> Value {
+pub(crate) fn to_openai_messages(messages: &[ChatMessage]) -> Value {
+    let images = crate::llm::vision::recent_image_ids(messages);
     let mut out = vec![json!({"role":"system","content": crate::host::system_prompt()})];
     for msg in messages {
         match msg.role {
@@ -96,15 +97,51 @@ fn to_openai_messages(messages: &[ChatMessage]) -> Value {
                 }
                 out.push(obj);
             }
-            Role::Tool => out.push(json!({
-                "role": "tool",
-                "tool_call_id": msg.tool_call_id,
-                "content": msg.content
-            })),
+            Role::Tool => {
+                out.push(json!({
+                    "role": "tool",
+                    "tool_call_id": msg.tool_call_id,
+                    "content": msg.content
+                }));
+                if images.contains(&msg.id) {
+                    if let Some(b64) = crate::llm::vision::image_data(msg) {
+                        out.push(crate::llm::vision::openai_image_followup(b64));
+                    }
+                }
+            }
             Role::System => {}
         }
     }
     Value::Array(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn attaches_recent_screenshot() {
+        let msg = ChatMessage {
+            id: "shot1".into(),
+            conversation_id: "c".into(),
+            role: Role::Tool,
+            content: "captura".into(),
+            tool_name: Some("screenshot".into()),
+            tool_call_id: Some("call1".into()),
+            tool_calls: None,
+            created_at: 1,
+            status: None,
+            image_base64: Some("abc123".into()),
+        };
+        let value = to_openai_messages(&[msg]);
+        let arr = value.as_array().unwrap();
+        assert!(arr.iter().any(|m| m["role"] == "tool"));
+        assert!(arr.iter().any(|m| {
+            m["content"]
+                .as_array()
+                .is_some_and(|c| c.iter().any(|p| p["type"] == "image_url"))
+        }));
+    }
 }
 
 #[derive(Default)]

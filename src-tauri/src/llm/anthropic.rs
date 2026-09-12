@@ -79,7 +79,8 @@ pub async fn test_connection(
     }
 }
 
-fn to_anthropic_messages(messages: &[ChatMessage]) -> Value {
+pub(crate) fn to_anthropic_messages(messages: &[ChatMessage]) -> Value {
+    let images = crate::llm::vision::recent_image_ids(messages);
     let mut out: Vec<Value> = Vec::new();
     for msg in messages {
         match msg.role {
@@ -111,7 +112,10 @@ fn to_anthropic_messages(messages: &[ChatMessage]) -> Value {
                     "content": [{
                         "type": "tool_result",
                         "tool_use_id": msg.tool_call_id,
-                        "content": msg.content
+                        "content": crate::llm::vision::anthropic_tool_content(
+                            msg,
+                            images.contains(&msg.id)
+                        )
                     }]
                 }));
             }
@@ -119,6 +123,31 @@ fn to_anthropic_messages(messages: &[ChatMessage]) -> Value {
         }
     }
     Value::Array(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tool_result_embeds_image() {
+        let msg = ChatMessage {
+            id: "shot1".into(),
+            conversation_id: "c".into(),
+            role: Role::Tool,
+            content: "captura".into(),
+            tool_name: Some("screenshot".into()),
+            tool_call_id: Some("call1".into()),
+            tool_calls: None,
+            created_at: 1,
+            status: None,
+            image_base64: Some("abc123".into()),
+        };
+        let value = to_anthropic_messages(&[msg]);
+        let content = &value[0]["content"][0]["content"];
+        assert_eq!(content.as_array().unwrap().len(), 2);
+        assert_eq!(content[1]["type"], "image");
+    }
 }
 
 #[derive(Default)]

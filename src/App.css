@@ -319,11 +319,12 @@ button {
 
 .composer {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   padding: 10px 12px 12px;
   border-top: 1px solid var(--border);
   background: var(--bg-elev);
-  align-items: flex-end;
+  align-items: stretch;
 }
 
 .composer-main {
@@ -338,7 +339,29 @@ button {
   display: flex;
   flex-direction: row;
   align-items: center;
+  justify-content: flex-end;
   gap: 6px;
+  width: 100%;
+}
+
+.bubble-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.bubble-actions .ghost {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.conv-search {
+  width: 100%;
+  background: #111;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
 }
 
 .new-overlay {

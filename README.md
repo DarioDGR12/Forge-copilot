@@ -12,7 +12,8 @@ Este repositorio es la app que corre **en tu máquina**. No es un servicio en la
 - Proveedores: demostración, OpenAI, Anthropic, OpenRouter, Ollama
 - Claves en el keyring de Linux (`secret-service`); si no hay llavero, archivo `0600` en `~/.local/share/forge-copilot/secrets.json`
 - Tools: `run_terminal`, `read_file`, `write_file`, `list_dir`, `list_apps`, `list_processes`, `screenshot`, `host_info`, `launch_app`, `open_path`, `clipboard_read`, `clipboard_write`, `notify`, `list_windows`, `focus_window`, `type_text`, `press_keys`, `mouse_click`, `pointer_info`
-- Adjuntar un archivo de texto al mensaje (32 KB) y barra de estado con proveedor, modelo y atajo
+- Adjuntar un archivo de texto al mensaje (32 KB), arrastrar/soltar, buscar chats, copiar/reintentar
+- Las capturas se guardan y se envían a modelos con visión (OpenAI / Anthropic / OpenRouter); el overlay se oculta con Escape
 - Política: lecturas, portapapeles (lectura), ventanas, notificaciones y abrir rutas dentro de `$HOME` en automático; shell, lanzar apps, escribir archivos o portapapeles, enfocar ventanas, teclear, atajos, clics y rutas sensibles piden Allow/Deny
 - Computer Use lite: teclado/ratón con lista blanca de teclas. El overlay se oculta antes de teclear. No hay vision-loop ni clics simulados si faltan `xdotool`/`ydotool`
 

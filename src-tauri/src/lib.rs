@@ -51,7 +51,9 @@ fn send_message(
     state: tauri::State<Arc<AppState>>,
     conversation_id: Option<String>,
     content: String,
+    allow_duplicate: Option<bool>,
 ) -> Result<Conversation, String> {
+    let _ = allow_duplicate;
     let content = content.trim().to_string();
     if content.is_empty() {
         return Err("escribe un mensaje".into());

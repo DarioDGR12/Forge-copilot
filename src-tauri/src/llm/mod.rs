@@ -2,6 +2,7 @@ pub mod anthropic;
 pub mod demo;
 pub mod openai;
 pub mod types;
+pub mod vision;
 
 use crate::error::AppResult;
 use crate::llm::types::{AssistantTurn, ChatMessage};

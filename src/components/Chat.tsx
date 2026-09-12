@@ -7,12 +7,13 @@ type ChatProps = {
   streaming: boolean;
   error: string | null;
   onSend: (text: string) => void;
+  onRetry: (text: string) => void;
   onCancel: () => void;
 };
 
 const MAX_ATTACH = 32 * 1024;
 
-export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps) {
+export function Chat({ messages, streaming, error, onSend, onRetry, onCancel }: ChatProps) {
   const [draft, setDraft] = useState("");
   const [attachName, setAttachName] = useState<string | null>(null);
   const [attachText, setAttachText] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
   }
 
   const canSend = Boolean(draft.trim() || attachText);
+  const lastUserId = [...messages].reverse().find((m) => m.role === "user")?.id;
 
   function sendPreset(text: string) {
     if (streaming || locked.current) return;
@@ -115,6 +117,7 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
                   ["chip-files", "Lista los archivos de mi home"],
                   ["chip-clipboard", "Qué hay en el portapapeles"],
                   ["chip-windows", "Lista las ventanas"],
+                  ["chip-screen", "Qué hay en pantalla"],
                   ["chip-type", "Teclea hola"],
                   ["chip-docs", "Abre Documentos"],
                   ["chip-uname", "Ejecuta `uname -a`"],
@@ -134,7 +137,17 @@ export function Chat({ messages, streaming, error, onSend, onCancel }: ChatProps
             </div>
           </div>
         ) : (
-          messages.map((message) => <MessageBubble key={message.id} message={message} />)
+          messages.map((message) => (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              onRetry={
+                !streaming && message.role === "user" && message.id === lastUserId
+                  ? () => onRetry(message.content)
+                  : undefined
+              }
+            />
+          ))
         )}
         <div ref={endRef} />
       </div>

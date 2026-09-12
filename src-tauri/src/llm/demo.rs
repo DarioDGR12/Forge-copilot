@@ -10,6 +10,7 @@ Prueba:
 - «qué hay en el portapapeles»
 - «lista las ventanas»
 - «teclea hola»
+- «qué hay en pantalla»
 - «abre Documentos»
 - «abre Firefox»
 - «ejecuta `uname -a`»
@@ -25,11 +26,15 @@ pub async fn complete(
     if let (Some(tool_idx), Some(user_idx)) = (last_tool, last_user) {
         if tool_idx > user_idx {
             let tool = &messages[tool_idx];
-            let reply = format!(
-                "Listo. Esto es lo que devolvió **{}**:\n\n```\n{}\n```",
-                tool.tool_name.as_deref().unwrap_or("herramienta"),
-                truncate(&tool.content, 4000)
-            );
+            let reply = if tool.tool_name.as_deref() == Some("screenshot") {
+                "Listo. Tengo la captura. En demostración no veo tu pantalla real: en la app Tauri con un modelo con visión (OpenAI, Anthropic u OpenRouter) describiré lo que aparece.\n\nEn demo: overlay Forge a la derecha, fondo oscuro, acento Pop.".into()
+            } else {
+                format!(
+                    "Listo. Esto es lo que devolvió **{}**:\n\n```\n{}\n```",
+                    tool.tool_name.as_deref().unwrap_or("herramienta"),
+                    truncate(&tool.content, 4000)
+                )
+            };
             stream_text(&reply, on_token).await;
             return Ok(AssistantTurn {
                 text: reply,

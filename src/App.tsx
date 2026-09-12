@@ -162,7 +162,17 @@ export default function App() {
     return [...messages, ...pendingTools, ...extra];
   }, [messages, liveTools, streamText, activeId]);
 
-  async function handleSend(text: string) {
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (approval) return;
+      if (isTauri()) void api.windowHide();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [approval]);
+
+  async function handleSend(text: string, retry = false) {
     if (sendingRef.current) return;
     sendingRef.current = true;
     loadGen.current += 1;
@@ -173,7 +183,7 @@ export default function App() {
     const localId = `local-${Date.now()}`;
     setMessages((prev) => {
       const last = prev[prev.length - 1];
-      if (last?.role === "user" && last.content === text) {
+      if (!retry && last?.role === "user" && last.content === text) {
         return prev;
       }
       return [
@@ -188,7 +198,7 @@ export default function App() {
       ];
     });
     try {
-      const conv = await api.sendMessage(activeId, text);
+      const conv = await api.sendMessage(activeId, text, retry);
       activeRef.current = conv.id;
       setActiveId(conv.id);
       await loadMessages(conv.id);
@@ -245,6 +255,7 @@ export default function App() {
             streaming={streaming}
             error={error}
             onSend={(text) => void handleSend(text)}
+            onRetry={(text) => void handleSend(text, true)}
             onCancel={() => {
               if (activeId) void api.cancelRun(activeId);
               setStreaming(false);

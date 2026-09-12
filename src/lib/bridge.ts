@@ -41,8 +41,8 @@ export const api = {
     invoke<ChatMessage[]>("get_messages", { conversationId }),
   createConversation: () => invoke<Conversation>("create_conversation"),
   deleteConversation: (id: string) => invoke<void>("delete_conversation", { id }),
-  sendMessage: (conversationId: string | null, content: string) =>
-    invoke<Conversation>("send_message", { conversationId, content }),
+  sendMessage: (conversationId: string | null, content: string, allowDuplicate = false) =>
+    invoke<Conversation>("send_message", { conversationId, content, allowDuplicate }),
   cancelRun: (conversationId: string) => invoke<void>("cancel_run", { conversationId }),
   resolveApproval: (requestId: string, allowed: boolean) =>
     invoke<void>("resolve_approval", { requestId, allowed }),

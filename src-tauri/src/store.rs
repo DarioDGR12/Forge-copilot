@@ -45,7 +45,19 @@ pub fn open() -> AppResult<Connection> {
         );
         ",
     )?;
+    migrate_messages(&conn)?;
     Ok(conn)
+}
+
+fn migrate_messages(conn: &Connection) -> AppResult<()> {
+    let mut stmt = conn.prepare("PRAGMA table_info(messages)")?;
+    let cols = stmt
+        .query_map([], |row| row.get::<_, String>(1))?
+        .collect::<Result<Vec<_>, _>>()?;
+    if !cols.iter().any(|c| c == "image_base64") {
+        conn.execute("ALTER TABLE messages ADD COLUMN image_base64 TEXT", [])?;
+    }
+    Ok(())
 }
 
 pub fn now_secs() -> i64 {
@@ -140,7 +152,7 @@ pub fn touch_conversation(conn: &Connection, id: &str) -> AppResult<()> {
 
 pub fn load_messages(conn: &Connection, conversation_id: &str) -> AppResult<Vec<ChatMessage>> {
     let mut stmt = conn.prepare(
-        "SELECT id, conversation_id, role, content, tool_name, tool_call_id, tool_calls_json, created_at
+        "SELECT id, conversation_id, role, content, tool_name, tool_call_id, tool_calls_json, created_at, image_base64
          FROM messages WHERE conversation_id = ?1 ORDER BY created_at ASC, id ASC",
     )?;
     let rows = stmt.query_map(params![conversation_id], |row| {
@@ -158,7 +170,7 @@ pub fn load_messages(conn: &Connection, conversation_id: &str) -> AppResult<Vec<
                 .and_then(|raw| serde_json::from_str::<Vec<ToolCall>>(raw).ok()),
             created_at: row.get(7)?,
             status: None,
-            image_base64: None,
+            image_base64: row.get(8)?,
         })
     })?;
     rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
@@ -171,8 +183,8 @@ pub fn insert_message(conn: &Connection, message: &ChatMessage) -> AppResult<()>
         .map(serde_json::to_string)
         .transpose()?;
     conn.execute(
-        "INSERT INTO messages(id, conversation_id, role, content, tool_name, tool_call_id, tool_calls_json, created_at)
-         VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+        "INSERT INTO messages(id, conversation_id, role, content, tool_name, tool_call_id, tool_calls_json, created_at, image_base64)
+         VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
             message.id,
             message.conversation_id,
@@ -181,7 +193,8 @@ pub fn insert_message(conn: &Connection, message: &ChatMessage) -> AppResult<()>
             message.tool_name,
             message.tool_call_id,
             tool_calls_json,
-            message.created_at
+            message.created_at,
+            message.image_base64
         ],
     )?;
     touch_conversation(conn, &message.conversation_id)?;

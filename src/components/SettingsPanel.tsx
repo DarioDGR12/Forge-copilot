@@ -2,6 +2,14 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/bridge";
 import type { KeyStatus, Settings } from "../types";
 
+const DEFAULT_MODELS: Record<string, string> = {
+  demo: "forge-demo",
+  openai: "gpt-4o-mini",
+  anthropic: "claude-sonnet-4-5",
+  openrouter: "openai/gpt-4o-mini",
+  ollama: "llama3.2",
+};
+
 const PROVIDERS = [
   { id: "demo", label: "Demostración (sin clave)" },
   { id: "openai", label: "OpenAI" },
@@ -111,7 +119,12 @@ export function SettingsPanel({ onSaved }: SettingsPanelProps) {
           value={settings.provider}
           onChange={(e) => {
             const provider = e.target.value;
-            setSettings({ ...settings, provider });
+            const stock = Object.values(DEFAULT_MODELS).includes(settings.model);
+            setSettings({
+              ...settings,
+              provider,
+              model: stock ? (DEFAULT_MODELS[provider] ?? settings.model) : settings.model,
+            });
             void api.keyStatus(provider).then(setStatus);
           }}
         >

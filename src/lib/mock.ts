@@ -38,6 +38,16 @@ function emit(event: string, payload: unknown) {
   for (const handler of set) handler(payload);
 }
 
+const DEMO_PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+
+function followUpReply(tool: ChatMessage): string {
+  if (tool.toolName === "screenshot") {
+    return "Listo. Tengo la captura. En demostración no veo tu pantalla real: en la app Tauri con un modelo con visión describiré lo que aparece.";
+  }
+  return `Listo. Resultado de **${tool.toolName}**:\n\n\`\`\`\n${tool.content}\n\`\`\``;
+}
+
 function titleFrom(text: string): string {
   const compact = text.trim().replace(/\s+/g, " ");
   return compact.length <= 42 ? compact || "Nueva conversación" : `${compact.slice(0, 41)}…`;
@@ -226,7 +236,7 @@ async function runDemoAgent(conversationId: string) {
 
   try {
     if (lastTool && lastToolIdx > lastUserIdx) {
-      const reply = `Listo. Esto es lo que devolvió **${lastTool.toolName ?? "la herramienta"}**:\n\n\`\`\`\n${lastTool.content}\n\`\`\``;
+      const reply = followUpReply(lastTool);
       await streamText(conversationId, reply);
       pushMessage(conversationId, {
         role: "assistant",
@@ -287,12 +297,14 @@ async function runDemoAgent(conversationId: string) {
         } satisfies ToolPayload);
         await new Promise((r) => setTimeout(r, 350));
         const result = mockToolResult(tool.name, tool.args);
+        const imageBase64 = tool.name === "screenshot" ? DEMO_PNG : undefined;
         pushMessage(conversationId, {
           role: "tool",
           content: result,
           toolName: tool.name,
           toolCallId: callId,
           status: "done",
+          imageBase64,
         });
         emit("agent://tool_result", {
           conversationId,
@@ -300,6 +312,7 @@ async function runDemoAgent(conversationId: string) {
           name: tool.name,
           arguments: JSON.stringify(tool.args),
           result,
+          imageBase64,
           status: "done",
         } satisfies ToolPayload);
       }
@@ -308,7 +321,7 @@ async function runDemoAgent(conversationId: string) {
         .reverse()
         .find((m) => m.role === "tool");
       if (follow) {
-        const reply = `Listo. Resultado de **${follow.toolName}**:\n\n\`\`\`\n${follow.content}\n\`\`\``;
+        const reply = followUpReply(follow);
         await streamText(conversationId, reply);
         pushMessage(conversationId, { role: "assistant", content: reply });
       }
@@ -400,7 +413,8 @@ export async function invoke<T>(cmd: string, args?: Record<string, unknown>): Pr
       }
       const existing = messages.get(conv.id) ?? [];
       const last = existing[existing.length - 1];
-      if (!(last?.role === "user" && last.content === content)) {
+      const allowDuplicate = Boolean(args?.allowDuplicate);
+      if (allowDuplicate || !(last?.role === "user" && last.content === content)) {
         pushMessage(conv.id, { role: "user", content });
         void runDemoAgent(conv.id);
       }
